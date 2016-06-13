@@ -1,0 +1,7 @@
+---
+title: "Project 1 - Basic Recommender System"
+author: "J. Hamski, V. Nguy"
+date: "June 12, 2016"
+output: html_document
+---
+
