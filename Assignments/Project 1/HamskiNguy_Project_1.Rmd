@@ -5,3 +5,8 @@ date: "June 12, 2016"
 output: html_document
 ---
 
+```{r}
+user.artists.matrix <- readRDS(file = 'user_artists_matrix.rds')
+str(user.artists.matrix)
+```
+

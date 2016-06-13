@@ -11,4 +11,4 @@ user.artists.pairwise <- read.delim('hetrec2011-lastfm-2k/user_artists.dat', sep
 user.artists.matrix <- user.artists.pairwise %>%
   spread(key = artistID, value = weight) %>%
   as.matrix() %>%
-  save(file = 'user_artists_matrix.RData')
+  saveRDS(file = 'user_artists_matrix.rds')
