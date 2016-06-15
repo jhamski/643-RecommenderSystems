@@ -6,7 +6,7 @@ output: html_document
 ---
 
 ```{r}
-user.artists.matrix <- readRDS(file = 'user_artists_matrix.rds')
-str(user.artists.matrix)
+user.artists <- readRDS(file = 'user_artists_matrix.rds')
+dim(user.artists.matrix)
 ```
 
