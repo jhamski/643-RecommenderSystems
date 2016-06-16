@@ -1,0 +1,45 @@
+---
+title: "Building a Recommendation System with R Examples"
+author: "J. Hamski"
+date: "June 16, 2016"
+output: html_document
+---
+
+```{r}
+library("recommenderlab")
+```
+
+# Data import
+
+```{r}
+data_package <- data(package = "recommenderlab")
+data_package$results[,"Item"]
+```
+
+```{r}
+data("MovieLense")
+class(MovieLense)
+```
+
+Note the data is in the realRatingMatrix class, which is optimized for sparse matrices. 
+
+```{r}
+methods(class = class(MovieLense))
+```
+
+See it as a regular matrix. 
+
+```{r}
+MovieLense.matrix <- as(MovieLense, "matrix")
+head(MovieLense.matrix)[,1:5]
+```
+
+**This is essentially the matrix form we have for our project**
+
+
+# Computing the Similarity Matrix
+
+```{r}
+similarity_users <- similarity(MovieLense[1:4], method = "cosine", which = "users")
+```
+
