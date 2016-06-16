@@ -5,8 +5,41 @@ date: "June 12, 2016"
 output: html_document
 ---
 
-```{r}
-user.artists <- readRDS(file = 'user_artists_matrix.rds')
-dim(user.artists.matrix)
+```{r, warning = FALSE, error = FALSE, message=FALSE}
+library(recommenderlab)
+library(Matrix)
+library(dplyr)
 ```
 
+
+```{r}
+user.artists <- readRDS(file = 'user_artists_matrix.rds')
+dim(user.artists)
+```
+
+
+For development, work with a smaller matrix. Set eval = FALSE for final rendering. 
+```{r, eval=TRUE}
+
+#note - perhaps this should select randomly instead of the first 1000 rows / 500 columns?
+user.artists <- user.artists[1:200, 1:500]
+dim(user.artists)
+```
+
+
+# Calculating Similarity using the 'recommenderlab' package
+```{r}
+#note this is takes a few minutes to compute
+user.artists.RRM <- new("realRatingMatrix", data = as(user.artists, "CsparseMatrix"))
+
+reclab.similarity <- similarity(user.artists.RRM, method = "cosine", which = "users")
+```
+
+```{r}
+image(as.matrix(reclab.similarity))
+```
+
+# Calculating Similiarity using 
+
+
+# Calculate Similarity using our own Cosine Distance Algorithm 

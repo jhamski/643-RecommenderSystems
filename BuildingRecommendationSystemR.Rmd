@@ -28,13 +28,13 @@ methods(class = class(MovieLense))
 ```
 
 See it as a regular matrix. 
-
+**This is essentially the matrix form we have for our project**
 ```{r}
 MovieLense.matrix <- as(MovieLense, "matrix")
 head(MovieLense.matrix)[,1:5]
 ```
 
-**This is essentially the matrix form we have for our project**
+
 
 
 # Computing the Similarity Matrix
@@ -42,4 +42,5 @@ head(MovieLense.matrix)[,1:5]
 ```{r}
 similarity_users <- similarity(MovieLense[1:4], method = "cosine", which = "users")
 ```
+
 
