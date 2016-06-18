@@ -22,7 +22,24 @@ Using Last.fm data we will build a simple recommender system that will recommend
 
 ```{r}
 user.artists.pairwise <- read.delim('hetrec2011-lastfm-2k/user_artists.dat', sep="\t")
+
+artists <- read.delim('hetrec2011-lastfm-2k/artists.dat', sep="\t") %>%
+  select(id, name)
+
 head(user.artists.pairwise)
+```
+
+## Converting from Artist IDs to Artist Names for easier interpretation
+```{r}
+colnames(artists) <- c("artistID", "name")
+#note: one duplicate artist
+#artists$name[duplicated(artists$name)==TRUE]
+
+user.artists.pairwise <- inner_join(user.artists.pairwise, artists, by="artistID")
+
+user.artists.pairwise <- select(user.artists.pairwise, -artistID)
+
+user.artists.pairwise[16060,]$name <- NA
 ```
 
 #Data Preparation
@@ -30,7 +47,7 @@ Using the TidyR library. The pairwise data was converted into a sparse matrix.
 
 ```{r eval=FALSE}
 user.artists.matrix <- user.artists.pairwise %>%
-  spread(key = artistID, value = weight) %>%
+  spread(key = name, value = weight) %>%
   as.matrix() %>%
   saveRDS(file = 'user_artists_matrix.rds')
 ```
@@ -43,10 +60,8 @@ dim(user.artists)
 
 For development, work with a smaller matrix. Set eval = FALSE for final rendering. 
 ```{r, eval=TRUE}
-
 #note - perhaps this should select randomly instead of the first 1000 rows / 500 columns?
 user.artists <- user.artists[1:200, 1:500]
-dim(user.artists)
 ```
 
 
