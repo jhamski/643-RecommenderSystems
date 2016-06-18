@@ -9,8 +9,31 @@ output: html_document
 library(recommenderlab)
 library(Matrix)
 library(dplyr)
+library(tidyr)
+
+options(scipen=999)
 ```
 
+# Description
+Using Last.fm data we will build a simple recommender system that will recommend music to the users. We will be building this recommender system using collaborative filtering. The system will use both a Item-based collaborative filter and User-based collaborative filtering (seperately) to recommend music to the users.
+
+# Dataset
+[Last.FM](http://grouplens.org/datasets/hetrec-2011/) data from grouplens.org. The dataset we are interested in is the 'user_artists.dat' data file. This file contains the artists listened by each user. It also provides a listening count for each [user, artist] pair.
+
+```{r}
+user.artists.pairwise <- read.delim('hetrec2011-lastfm-2k/user_artists.dat', sep="\t")
+head(user.artists.pairwise)
+```
+
+#Data Preparation
+Using the TidyR library. The pairwise data was converted into a sparse matrix.
+
+```{r eval=FALSE}
+user.artists.matrix <- user.artists.pairwise %>%
+  spread(key = artistID, value = weight) %>%
+  as.matrix() %>%
+  saveRDS(file = 'user_artists_matrix.rds')
+```
 
 ```{r}
 user.artists <- readRDS(file = 'user_artists_matrix.rds')
@@ -32,11 +55,13 @@ dim(user.artists)
 #note this is takes a few minutes to compute
 user.artists.RRM <- new("realRatingMatrix", data = as(user.artists, "CsparseMatrix"))
 
-reclab.similarity <- similarity(user.artists.RRM, method = "cosine", which = "users")
+reclab.similarity.user <- similarity(user.artists.RRM, method = "cosine", which = "users")
+reclab.similarity.item <- similarity(user.artists.RRM, method = "cosine", which = "items")
 ```
 
 ```{r}
-image(as.matrix(reclab.similarity))
+image(as.matrix(reclab.similarity.user))
+image(as.matrix(reclab.similarity.item))
 ```
 
 # Calculating Similiarity using 
