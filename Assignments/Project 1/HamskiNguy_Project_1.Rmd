@@ -2,7 +2,7 @@
 title: "Project 1 - Basic Recommender System"
 author: "J. Hamski, V. Nguy"
 date: "June 12, 2016"
-output: html_document
+output: pdf_document
 ---
 
 ```{r, warning = FALSE, error = FALSE, message=FALSE}
@@ -16,6 +16,8 @@ options(scipen=999)
 
 # Description
 Using Last.fm data we will build a simple recommender system that will recommend music to the users. We will be building this recommender system using collaborative filtering. The system will use both a Item-based collaborative filter and User-based collaborative filtering (seperately) to recommend music to the users.
+
+[Dataset information](http://files.grouplens.org/datasets/hetrec2011/hetrec2011-lastfm-readme.txt)
 
 # Dataset
 [Last.FM](http://grouplens.org/datasets/hetrec-2011/) data from grouplens.org. The dataset we are interested in is the 'user_artists.dat' data file. This file contains the artists listened by each user. It also provides a listening count for each [user, artist] pair.
@@ -45,23 +47,29 @@ user.artists.pairwise[16060,]$name <- NA
 #Data Preparation
 Using the TidyR library. The pairwise data was converted into a sparse matrix.
 
-```{r eval=FALSE}
+```{r}
 user.artists.matrix <- user.artists.pairwise %>%
   spread(key = name, value = weight) %>%
-  as.matrix() %>%
-  saveRDS(file = 'user_artists_matrix.rds')
+  as.matrix()
 ```
 
 ```{r}
-user.artists <- readRDS(file = 'user_artists_matrix.rds')
-dim(user.artists)
+user.artists <- user.artists.matrix[,-1]
+head(user.artists)[,1:5]
 ```
 
 
 For development, work with a smaller matrix. Set eval = FALSE for final rendering. 
 ```{r, eval=TRUE}
 #note - perhaps this should select randomly instead of the first 1000 rows / 500 columns?
-user.artists <- user.artists[1:200, 1:500]
+#user.artists <- user.artists[1:200, 1:500]
+
+user.artists.colSums <- colSums(user.artists, na.rm=TRUE)
+
+hist(user.artists.colSums)
+
+colnames(user.artists.colSums) <- c("artist", "ColSum")
+
 ```
 
 
@@ -70,16 +78,39 @@ user.artists <- user.artists[1:200, 1:500]
 #note this is takes a few minutes to compute
 user.artists.RRM <- new("realRatingMatrix", data = as(user.artists, "CsparseMatrix"))
 
-reclab.similarity.user <- similarity(user.artists.RRM, method = "cosine", which = "users")
+#reclab.similarity.user <- similarity(user.artists.RRM, method = "cosine", which = "users")
 reclab.similarity.item <- similarity(user.artists.RRM, method = "cosine", which = "items")
+
+reclab.sim.item.matrix <- as.matrix(reclab.similarity.item)
 ```
 
 ```{r}
 image(as.matrix(reclab.similarity.user))
-image(as.matrix(reclab.similarity.item))
+image(reclab.sim.item.matrix)
 ```
 
-# Calculating Similiarity using 
+```{r}
+#Punk band Agent Orange - we should expect it shares similarity with other punk bands. 
+AgentOrange.sim.row <- reclab.sim.item.matrix["Agent Orange",]
+
+AgentOrange.sim.row[complete.cases(AgentOrange.sim.row)]
+```
+
+
+# Calculating Similiarity using built-in Matrix Algebra Functions
+
+```{r, eval=FALSE}
+
+cosineDist <- function(x){
+  as.dist(1 - x%*%t(x)/(sqrt(rowSums(x^2) %*% t(rowSums(x^2))))) 
+}
+
+cosineDist(user.artists)
+
+image(as.matrix(user.artists))
+```
+
 
 
 # Calculate Similarity using our own Cosine Distance Algorithm 
+
