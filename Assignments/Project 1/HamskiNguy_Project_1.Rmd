@@ -90,10 +90,13 @@ image(reclab.sim.item.matrix)
 ```
 
 ```{r}
-#Punk band Agent Orange - we should expect it shares similarity with other punk bands. 
-AgentOrange.sim.row <- reclab.sim.item.matrix["Agent Orange",]
+#Old-school hiphop band A Tribe Called Quest's similar listens
+ATribeCalledQuest.sim.row <- reclab.sim.item.matrix["A Tribe Called Quest",]
 
-AgentOrange.sim.row[complete.cases(AgentOrange.sim.row)]
+ATribeCalledQuest.similar.listens <- ATribeCalledQuest.sim.row[complete.cases(AgentOrange.sim.row)]
+
+#Several similar artists - De La Soul, Beck, Sade are in the same genre
+sort(ATribeCalledQuest.similar.listens, decreasing = TRUE)[1:20]
 ```
 
 
