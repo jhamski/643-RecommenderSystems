@@ -16,7 +16,7 @@ options(scipen=999)
 ```
 
 # Description
-Using Last.fm data we will build a simple recommender system that will recommend music to the users. We will be building this recommender system using collaborative filtering. The system will use both a Item-based collaborative filter and User-based collaborative filtering (seperately) to recommend music to the users.
+Using Last.fm data we will build a simple recommender system that will recommend music to the users. We will be building this recommender system using collaborative filtering. The system will use an Item-based collaborative filter to recommend music to the users.
 
 [Dataset information](http://files.grouplens.org/datasets/hetrec2011/hetrec2011-lastfm-readme.txt)
 
@@ -93,7 +93,6 @@ image(reclab.sim.item.matrix)
 #Old-school hiphop band A Tribe Called Quest's similar listens
 ATribeCalledQuest.sim.row <- reclab.sim.item.matrix["3 Doors Down",]
 
-#Was not running before. I set the eval property to false for the time being.
 ATribeCalledQuest.similar.listens <- ATribeCalledQuest.sim.row[complete.cases(ATribeCalledQuest.sim.row)]
 
 #Several similar artists - De La Soul, Beck, Sade are in the same genre
