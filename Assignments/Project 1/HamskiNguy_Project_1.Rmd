@@ -62,7 +62,6 @@ dim(user.artists)
 ```
 
 
-
 For development, work with a smaller matrix. Set eval = FALSE for final rendering. 
 ```{r, eval=TRUE}
 #note - perhaps this should select randomly instead of the first 1000 rows / 500 columns?
@@ -86,7 +85,7 @@ reclab.sim.item.matrix <- as.matrix(reclab.similarity.item)
 ```
 
 ```{r}
-image(as.matrix(reclab.similarity.user))
+#image(as.matrix(reclab.similarity.user))
 image(reclab.sim.item.matrix)
 ```
 
@@ -166,7 +165,7 @@ cos_sim_matrix(movie)
 cos_sim_matrix(t(movie))
 ```
 
-```{r}
+```{r, warning=FALSE}
 #Results should match Item-Item CF tab
 custom.similarity.item <- cos_sim_matrix(user.artists)
 
@@ -180,10 +179,10 @@ test2 <- as.matrix(t(test))
 
 test2<- test2[!(apply(test2, 1, function(y) any(y == 0))),]
 
-movie <- movie[,-1]
+#movie <- movie[,-1]
 
-test2 <- test2[,1]==0
-View(test2)
-View(t(test))
+#test2 <- test2[,1]==0
+#View(test2)
+#View(t(test))
 
 ```
