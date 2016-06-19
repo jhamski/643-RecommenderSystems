@@ -124,8 +124,6 @@ cosineDist(user.artists)
 image(as.matrix(user.artists))
 ```
 
-
-
 # Calculate Similarity using our own Cosine Distance Algorithm 
 ```{r}
 euc_distance <- function(x) {
@@ -179,10 +177,7 @@ test2 <- as.matrix(t(test))
 
 test2<- test2[!(apply(test2, 1, function(y) any(y == 0))),]
 
-#movie <- movie[,-1]
-
-#test2 <- test2[,1]==0
-#View(test2)
+View(test2)
 #View(t(test))
 
 ```
