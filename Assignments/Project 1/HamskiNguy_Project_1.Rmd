@@ -50,7 +50,7 @@ ggplot(user.artists.pairwise, aes(x = weight)) + geom_density() + theme_bw() + s
 
 Using the TidyR library. The pairwise data was converted into a sparse matrix.
 ```{r spread_data}
-num_listens <- 1000
+num_listens <- 5000
 
 user.artists.matrix <- user.artists.pairwise %>%
   filter(weight > num_listens) %>% #filter artists with less than num_listens listens
@@ -61,7 +61,6 @@ user.artists <- user.artists.matrix[,-1]
 dim(user.artists)
 ```
 
-
 For development, work with a smaller matrix. Set eval = FALSE for final rendering. 
 ```{r, eval=TRUE}
 #note - perhaps this should select randomly instead of the first 1000 rows / 500 columns?
@@ -71,7 +70,6 @@ user.artists.colSums <- colSums(user.artists, na.rm=TRUE)
 
 summary(user.artists.colSums)
 ```
-
 
 # Calculating Similarity using the 'recommenderlab' package
 ```{r reclab_sim_matrix}
@@ -89,24 +87,29 @@ reclab.sim.item.matrix <- as.matrix(reclab.similarity.item)
 image(reclab.sim.item.matrix)
 ```
 
+```{r define_artists}
+artist_1 <- '50 Cent'
+artist_2 <- 'Nine Inch Nails'
+```
+
 ```{r reclab_recommendations_1}
 #Old-school hiphop band A Tribe Called Quest's similar listens
-ATribeCalledQuest.sim.row <- reclab.sim.item.matrix["Beach House",]
+ATribeCalledQuest.sim.row <- reclab.sim.item.matrix[artist_1,]
 
 ATribeCalledQuest.similar.listens <- ATribeCalledQuest.sim.row[complete.cases(ATribeCalledQuest.sim.row)]
 
 #Several similar artists - De La Soul, Beck, Sade are in the same genre
-sort(ATribeCalledQuest.similar.listens, decreasing = TRUE)[1:20]
+sort(ATribeCalledQuest.similar.listens, decreasing = TRUE)[1:10]
 ```
 
 ```{r artist_recommendations_2}
 #Old-school hiphop band A Tribe Called Quest's similar listens
-ATribeCalledQuest.sim.row <- reclab.sim.item.matrix["Nine Inch Nails",]
+ATribeCalledQuest.sim.row <- reclab.sim.item.matrix[artist_2,]
 
 ATribeCalledQuest.similar.listens <- ATribeCalledQuest.sim.row[complete.cases(ATribeCalledQuest.sim.row)]
 
 #Several similar artists - De La Soul, Beck, Sade are in the same genre
-sort(ATribeCalledQuest.similar.listens, decreasing = TRUE)[1:20]
+sort(ATribeCalledQuest.similar.listens, decreasing = TRUE)[1:10]
 ```
 
 # Calculating Similiarity using built-in Matrix Algebra Functions
@@ -171,27 +174,27 @@ custom.similarity.item <- cos_sim_matrix(user.artists)
 ```
 
 ```{r custom_artist_recommendations_1}
-recommendation.custom <- custom.similarity.item["Beach House",]
+recommendation.custom <- custom.similarity.item[artist_1,]
 recommendation.custom <- as.matrix(t(recommendation.custom))
 
 #Remove records with no score
 recommendation.custom <- recommendation.custom[!(apply(recommendation.custom, 1, function(y) any(y == 0))),]
 
 #Remove 'identity recommendation'
-recommendation.custom <- recommendation.custom[recommendation.custom<0.99]
+recommendation.custom <- recommendation.custom[recommendation.custom<1]
 
-sort(recommendation.custom, decreasing = TRUE)
+sort(recommendation.custom, decreasing = TRUE)[1:10]
 ```
 
 ```{r custom_artist_recommendations_2}
-recommendation.custom <- custom.similarity.item["Nine Inch Nails",]
+recommendation.custom <- custom.similarity.item[artist_2,]
 recommendation.custom <- as.matrix(t(recommendation.custom))
 
 #Remove records with no score
 recommendation.custom <- recommendation.custom[!(apply(recommendation.custom, 1, function(y) any(y == 0))),]
 
 #Remove 'identity recommendation'
-recommendation.custom <- recommendation.custom[recommendation.custom<0.99]
+recommendation.custom <- recommendation.custom[round(recommendation.custom, 6)<1]
 
-sort(recommendation.custom, decreasing = TRUE)
+sort(recommendation.custom, decreasing = TRUE)[1:10]
 ```
