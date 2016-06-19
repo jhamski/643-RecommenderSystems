@@ -5,7 +5,7 @@ date: "June 12, 2016"
 output: html_document
 ---
 
-```{r, warning = FALSE, error = FALSE, message=FALSE}
+```{r load_libraries, warning = FALSE, error = FALSE, message=FALSE}
 library(recommenderlab)
 library(Matrix)
 library(dplyr)
@@ -21,23 +21,24 @@ Using Last.fm data we will build a simple recommender system that will recommend
 [Dataset information](http://files.grouplens.org/datasets/hetrec2011/hetrec2011-lastfm-readme.txt)
 
 # Dataset
-[Last.FM](http://grouplens.org/datasets/hetrec-2011/) data from grouplens.org. The dataset we are interested in is the 'user_artists.dat' data file. This file contains the artists listened by each user. It also provides a listening count for each [user, artist] pair.
+[Last.FM](http://grouplens.org/datasets/hetrec-2011/) data from grouplens.org. The dataset we are interested in is the 'user_artists.dat' data file. This file contains the artists listened by each user. It also provides a listening count for each [user, artist] pair.  
 
-```{r}
+Reading in needed datasets. Artist information will be joined to user-artist dataset for readability
+```{r Read_Dataset}
 user.artists.pairwise <- read.delim('hetrec2011-lastfm-2k/user_artists.dat', sep="\t")
 
 artists <- read.delim('hetrec2011-lastfm-2k/artists.dat', sep="\t") %>%
   select(id, name)
-
-head(user.artists.pairwise)
 ```
 
-## Converting from Artist IDs to Artist Names for easier interpretation
-```{r}
+#Data Preparation
+
+Converting from Artist IDs to Artist Names for easier interpretation
+```{r join_artist_name}
 colnames(artists) <- c("artistID", "name")
+
 #note: one duplicate artist
 #artists$name[duplicated(artists$name)==TRUE]
-
 user.artists.pairwise <- inner_join(user.artists.pairwise, artists, by="artistID")
 
 user.artists.pairwise <- select(user.artists.pairwise, -artistID)
@@ -47,13 +48,12 @@ user.artists.pairwise[16060,]$name <- NA
 ggplot(user.artists.pairwise, aes(x = weight)) + geom_density() + theme_bw() + scale_x_log10()
 ```
 
-#Data Preparation
 Using the TidyR library. The pairwise data was converted into a sparse matrix.
+```{r spread_data}
+num_listens <- 1000
 
-```{r}
 user.artists.matrix <- user.artists.pairwise %>%
-  #NOTE - Currently changed to larger number. Its taking too long to run on my machine.
-  filter(weight > 5000) %>% #filter artists with less than 900 listens
+  filter(weight > num_listens) %>% #filter artists with less than num_listens listens
   spread(key = name, value = weight) %>%
   as.matrix()
 
@@ -74,7 +74,7 @@ summary(user.artists.colSums)
 
 
 # Calculating Similarity using the 'recommenderlab' package
-```{r}
+```{r reclab_sim_matrix}
 #note this is takes a few minutes to compute
 user.artists.RRM <- new("realRatingMatrix", data = as(user.artists, "CsparseMatrix"))
 
@@ -84,14 +84,14 @@ reclab.similarity.item <- similarity(user.artists.RRM, method = "cosine", which 
 reclab.sim.item.matrix <- as.matrix(reclab.similarity.item)
 ```
 
-```{r}
+```{r sim_matrix}
 #image(as.matrix(reclab.similarity.user))
 image(reclab.sim.item.matrix)
 ```
 
-```{r}
+```{r reclab_recommendations_1}
 #Old-school hiphop band A Tribe Called Quest's similar listens
-ATribeCalledQuest.sim.row <- reclab.sim.item.matrix["3 Doors Down",]
+ATribeCalledQuest.sim.row <- reclab.sim.item.matrix["Beach House",]
 
 ATribeCalledQuest.similar.listens <- ATribeCalledQuest.sim.row[complete.cases(ATribeCalledQuest.sim.row)]
 
@@ -99,11 +99,10 @@ ATribeCalledQuest.similar.listens <- ATribeCalledQuest.sim.row[complete.cases(AT
 sort(ATribeCalledQuest.similar.listens, decreasing = TRUE)[1:20]
 ```
 
-```{r}
+```{r artist_recommendations_2}
 #Old-school hiphop band A Tribe Called Quest's similar listens
-ATribeCalledQuest.sim.row <- reclab.sim.item.matrix["Beach House",]
+ATribeCalledQuest.sim.row <- reclab.sim.item.matrix["Nine Inch Nails",]
 
-#Was not running before. I set the eval property to false for the time being.
 ATribeCalledQuest.similar.listens <- ATribeCalledQuest.sim.row[complete.cases(ATribeCalledQuest.sim.row)]
 
 #Several similar artists - De La Soul, Beck, Sade are in the same genre
@@ -124,7 +123,7 @@ image(as.matrix(user.artists))
 ```
 
 # Calculate Similarity using our own Cosine Distance Algorithm 
-```{r}
+```{r custom_similarity_function}
 euc_distance <- function(x) {
   return (sqrt(sum(x^2,na.rm=TRUE)))
 }
@@ -149,8 +148,9 @@ cos_sim_matrix <- function(x) {
 }
 ```
 
-Test case to validate results. Using toy dataset from meetup. Set to false before final rendering.
+
 ```{r, eval=F}
+#Test case to validate results. Using toy dataset from meetup. Set to false before final rendering.
 movie <- read.csv('UBCF.csv', header = TRUE, stringsAsFactors = FALSE)
 rownames(movie) <- movie[,1]
 movie <- movie[,-1]
@@ -162,7 +162,7 @@ cos_sim_matrix(movie)
 cos_sim_matrix(t(movie))
 ```
 
-```{r, warning=FALSE}
+```{r custom_sim_matrix, warning=FALSE}
 #Results should match Item-Item CF tab
 custom.similarity.item <- cos_sim_matrix(user.artists)
 
@@ -170,13 +170,28 @@ custom.similarity.item <- cos_sim_matrix(user.artists)
 #custom.similarity.user <- cos_sim_matrix(t(user.artists))
 ```
 
-```{r}
-test <- custom.similarity.item["Nine Inch Nails",]
-test2 <- as.matrix(t(test))
+```{r custom_artist_recommendations_1}
+recommendation.custom <- custom.similarity.item["Beach House",]
+recommendation.custom <- as.matrix(t(recommendation.custom))
 
-test2<- test2[!(apply(test2, 1, function(y) any(y == 0))),]
+#Remove records with no score
+recommendation.custom <- recommendation.custom[!(apply(recommendation.custom, 1, function(y) any(y == 0))),]
 
-View(test2)
-#View(t(test))
+#Remove 'identity recommendation'
+recommendation.custom <- recommendation.custom[recommendation.custom<0.99]
 
+sort(recommendation.custom, decreasing = TRUE)
+```
+
+```{r custom_artist_recommendations_2}
+recommendation.custom <- custom.similarity.item["Nine Inch Nails",]
+recommendation.custom <- as.matrix(t(recommendation.custom))
+
+#Remove records with no score
+recommendation.custom <- recommendation.custom[!(apply(recommendation.custom, 1, function(y) any(y == 0))),]
+
+#Remove 'identity recommendation'
+recommendation.custom <- recommendation.custom[recommendation.custom<0.99]
+
+sort(recommendation.custom, decreasing = TRUE)
 ```
