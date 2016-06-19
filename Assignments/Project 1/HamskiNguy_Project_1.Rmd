@@ -24,7 +24,7 @@ Using Last.fm data we will build a simple recommender system that will recommend
 [Last.FM](http://grouplens.org/datasets/hetrec-2011/) data from grouplens.org. The dataset we are interested in is the 'user_artists.dat' data file. This file contains the artists listened by each user. It also provides a listening count for each [user, artist] pair.  
 
 Reading in needed datasets. Artist information will be joined to user-artist dataset for readability
-```{r Read_Dataset}
+```{r Read_Dataset, cache=TRUE}
 user.artists.pairwise <- read.delim('hetrec2011-lastfm-2k/user_artists.dat', sep="\t")
 
 artists <- read.delim('hetrec2011-lastfm-2k/artists.dat', sep="\t") %>%
@@ -34,7 +34,7 @@ artists <- read.delim('hetrec2011-lastfm-2k/artists.dat', sep="\t") %>%
 #Data Preparation
 
 Converting from Artist IDs to Artist Names for easier interpretation
-```{r join_artist_name}
+```{r join_artist_name, cache=TRUE}
 colnames(artists) <- c("artistID", "name")
 
 #note: one duplicate artist
@@ -49,7 +49,7 @@ ggplot(user.artists.pairwise, aes(x = weight)) + geom_density() + theme_bw() + s
 ```
 
 Using the TidyR library. The pairwise data was converted into a sparse matrix.
-```{r spread_data}
+```{r spread_data, cache=TRUE}
 num_listens <- 1000
 
 user.artists.matrix <- user.artists.pairwise %>%
@@ -63,7 +63,7 @@ dim(user.artists)
 
 
 For development, work with a smaller matrix. Set eval = FALSE for final rendering. 
-```{r, eval=TRUE}
+```{r, eval=TRUE, , cache=TRUE}
 #note - perhaps this should select randomly instead of the first 1000 rows / 500 columns?
 #user.artists <- user.artists[1:200, 1:500]
 
@@ -74,7 +74,7 @@ summary(user.artists.colSums)
 
 
 # Calculating Similarity using the 'recommenderlab' package
-```{r reclab_sim_matrix}
+```{r reclab_sim_matrix, cache=TRUE}
 #note this is takes a few minutes to compute
 user.artists.RRM <- new("realRatingMatrix", data = as(user.artists, "CsparseMatrix"))
 
@@ -84,12 +84,12 @@ reclab.similarity.item <- similarity(user.artists.RRM, method = "cosine", which 
 reclab.sim.item.matrix <- as.matrix(reclab.similarity.item)
 ```
 
-```{r sim_matrix}
+```{r sim_matrix, cache=TRUE}
 #image(as.matrix(reclab.similarity.user))
 image(reclab.sim.item.matrix)
 ```
 
-```{r reclab_recommendations_1}
+```{r reclab_recommendations_1, cache=TRUE}
 #Old-school hiphop band A Tribe Called Quest's similar listens
 ATribeCalledQuest.sim.row <- reclab.sim.item.matrix["Beach House",]
 
