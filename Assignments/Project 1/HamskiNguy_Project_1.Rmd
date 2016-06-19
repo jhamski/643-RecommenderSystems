@@ -5,7 +5,7 @@ date: "June 12, 2016"
 output: html_document
 ---
 
-```{r load_libraries, warning = FALSE, error = FALSE, message=FALSE}
+```{r load_libraries, warning = FALSE, error = FALSE, message=FALSE, cache = TRUE}
 library(recommenderlab)
 library(Matrix)
 library(dplyr)
