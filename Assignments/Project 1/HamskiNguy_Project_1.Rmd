@@ -52,7 +52,8 @@ Using the TidyR library. The pairwise data was converted into a sparse matrix.
 
 ```{r}
 user.artists.matrix <- user.artists.pairwise %>%
-  filter(weight > 900) %>% #filter artists with less than 900 listens
+  #NOTE - Currently changed to larger number. Its taking too long to run on my machine.
+  filter(weight > 5000) %>% #filter artists with less than 900 listens
   spread(key = name, value = weight) %>%
   as.matrix()
 
@@ -89,10 +90,11 @@ image(as.matrix(reclab.similarity.user))
 image(reclab.sim.item.matrix)
 ```
 
-```{r}
+```{r, eval=FALSE}
 #Old-school hiphop band A Tribe Called Quest's similar listens
 ATribeCalledQuest.sim.row <- reclab.sim.item.matrix["A Tribe Called Quest",]
 
+#Was not running before. I set the eval property to false for the time being.
 ATribeCalledQuest.similar.listens <- ATribeCalledQuest.sim.row[complete.cases(AgentOrange.sim.row)]
 
 #Several similar artists - De La Soul, Beck, Sade are in the same genre
@@ -116,4 +118,62 @@ image(as.matrix(user.artists))
 
 
 # Calculate Similarity using our own Cosine Distance Algorithm 
+```{r}
+euc_distance <- function(x) {
+  return (sqrt(sum(x^2,na.rm=TRUE)))
+}
 
+cos_sim_matrix <- function(x) {
+  # initialize similarity matrix
+  m <- matrix(NA, nrow=ncol(x),ncol=ncol(x),dimnames=list(colnames(x),colnames(x)))
+  similarity <- as.data.frame(m)
+  
+  for(i in 1:ncol(x)) {
+    for(j in i:ncol(x)) {
+      #Take only the columns in which both users ranked the item
+      co_rate_1 <- x[which(x[,i] & x[,j]),i]
+      co_rate_2 <- x[which(x[,i] & x[,j]),j]  
+      #Calculate the Cosine Similarity
+      similarity[i,j]= sum(co_rate_1*co_rate_2) / (euc_distance(x[,i]) * euc_distance(x[,j]))
+      #Replicate results for the 'other half' of the matrix
+      similarity[j,i]=similarity[i,j]        
+    }
+  }
+  return(similarity)
+}
+```
+
+Test case to validate results. Using toy dataset from meetup. Set to false before final rendering.
+```{r, eval=TRUE}
+movie <- read.csv('UBCF.csv', header = TRUE, stringsAsFactors = FALSE)
+rownames(movie) <- movie[,1]
+movie <- movie[,-1]
+
+#Results should match Item-Item CF tab
+cos_sim_matrix(movie)
+
+#Results should match User-User CF tab
+cos_sim_matrix(t(movie))
+```
+
+```{r}
+#Results should match Item-Item CF tab
+custom.similarity.item <- cos_sim_matrix(user.artists)
+
+#Results should match User-User CF tab
+#custom.similarity.user <- cos_sim_matrix(t(user.artists))
+```
+
+```{r}
+test <- custom.similarity.item["Nine Inch Nails",]
+test2 <- as.matrix(t(test))
+
+test2<- test2[!(apply(test2, 1, function(y) any(y == 0))),]
+
+movie <- movie[,-1]
+
+test2 <- test2[,1]==0
+View(test2)
+View(t(test))
+
+```
