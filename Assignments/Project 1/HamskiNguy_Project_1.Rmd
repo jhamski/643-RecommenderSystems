@@ -2,7 +2,7 @@
 title: "Project 1 - Basic Recommender System"
 author: "J. Hamski, V. Nguy"
 date: "June 12, 2016"
-output: pdf_document
+output: html_document
 ---
 
 ```{r, warning = FALSE, error = FALSE, message=FALSE}
@@ -79,7 +79,7 @@ summary(user.artists.colSums)
 #note this is takes a few minutes to compute
 user.artists.RRM <- new("realRatingMatrix", data = as(user.artists, "CsparseMatrix"))
 
-reclab.similarity.user <- similarity(user.artists.RRM, method = "cosine", which = "users")
+#reclab.similarity.user <- similarity(user.artists.RRM, method = "cosine", which = "users")
 reclab.similarity.item <- similarity(user.artists.RRM, method = "cosine", which = "items")
 
 reclab.sim.item.matrix <- as.matrix(reclab.similarity.item)
@@ -90,17 +90,27 @@ image(as.matrix(reclab.similarity.user))
 image(reclab.sim.item.matrix)
 ```
 
-```{r, eval=FALSE}
+```{r}
 #Old-school hiphop band A Tribe Called Quest's similar listens
-ATribeCalledQuest.sim.row <- reclab.sim.item.matrix["A Tribe Called Quest",]
+ATribeCalledQuest.sim.row <- reclab.sim.item.matrix["3 Doors Down",]
 
 #Was not running before. I set the eval property to false for the time being.
-ATribeCalledQuest.similar.listens <- ATribeCalledQuest.sim.row[complete.cases(AgentOrange.sim.row)]
+ATribeCalledQuest.similar.listens <- ATribeCalledQuest.sim.row[complete.cases(ATribeCalledQuest.sim.row)]
 
 #Several similar artists - De La Soul, Beck, Sade are in the same genre
 sort(ATribeCalledQuest.similar.listens, decreasing = TRUE)[1:20]
 ```
 
+```{r}
+#Old-school hiphop band A Tribe Called Quest's similar listens
+ATribeCalledQuest.sim.row <- reclab.sim.item.matrix["Beach House",]
+
+#Was not running before. I set the eval property to false for the time being.
+ATribeCalledQuest.similar.listens <- ATribeCalledQuest.sim.row[complete.cases(ATribeCalledQuest.sim.row)]
+
+#Several similar artists - De La Soul, Beck, Sade are in the same genre
+sort(ATribeCalledQuest.similar.listens, decreasing = TRUE)[1:20]
+```
 
 # Calculating Similiarity using built-in Matrix Algebra Functions
 
@@ -144,7 +154,7 @@ cos_sim_matrix <- function(x) {
 ```
 
 Test case to validate results. Using toy dataset from meetup. Set to false before final rendering.
-```{r, eval=TRUE}
+```{r, eval=F}
 movie <- read.csv('UBCF.csv', header = TRUE, stringsAsFactors = FALSE)
 rownames(movie) <- movie[,1]
 movie <- movie[,-1]
