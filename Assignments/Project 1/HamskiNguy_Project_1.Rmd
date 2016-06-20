@@ -3,6 +3,7 @@ title: "Project 1 - Basic Recommender System"
 author: "J. Hamski, V. Nguy"
 date: "June 12, 2016"
 output: html_document
+runtime: shiny
 ---
 
 ```{r load_libraries, warning = FALSE, error = FALSE, message=FALSE, cache = TRUE}
@@ -11,14 +12,18 @@ library(Matrix)
 library(dplyr)
 library(tidyr)
 library(ggplot2)
+require(shiny)
+library(webshot)
 
 options(scipen=999)
 ```
 
 # Description
-Using Last.fm data we will build a simple recommender system that will recommend music to the users. We will be building this recommender system using collaborative filtering. The system will use an Item-based collaborative filter to recommend music to the users.
+[Last.fm](http://www.lastfm.com), a web application which allows users to track what music they play on their computer or mobile devices, released a listener dataset from 2006. [Dataset information](http://files.grouplens.org/datasets/hetrec2011/hetrec2011-lastfm-readme.txt)
 
-[Dataset information](http://files.grouplens.org/datasets/hetrec2011/hetrec2011-lastfm-readme.txt)
+
+Using Last.fm data we will build a simple recommender system that will recommend music to the users. We will be building this recommender system using collaborative filtering. The system will use an Item-based collaborative filter to recommend music to the users by recommending more artists based on a single artist.
+
 
 # Dataset
 [Last.FM](http://grouplens.org/datasets/hetrec-2011/) data from grouplens.org. The dataset we are interested in is the 'user_artists.dat' data file. This file contains the artists listened by each user. It also provides a listening count for each [user, artist] pair.  
@@ -33,7 +38,7 @@ artists <- read.delim('hetrec2011-lastfm-2k/artists.dat', sep="\t") %>%
 
 #Data Preparation
 
-Converting from Artist IDs to Artist Names for easier interpretation
+Converting from Artist IDs to Artist Names for easier interpretation.
 ```{r join_artist_name, cache=TRUE}
 colnames(artists) <- c("artistID", "name")
 
@@ -43,12 +48,14 @@ user.artists.pairwise <- inner_join(user.artists.pairwise, artists, by="artistID
 
 user.artists.pairwise <- select(user.artists.pairwise, -artistID)
 
+user.artists.pairwise$name <- strtrim(user.artists.pairwise$name, 100)
+
 user.artists.pairwise[16060,]$name <- NA
 
 ggplot(user.artists.pairwise, aes(x = weight)) + geom_density() + theme_bw() + scale_x_log10()
 ```
 
-Using the TidyR library. The pairwise data was converted into a sparse matrix.
+Using the TidyR library. The pairwise data was converted into a sparse matrix. Due to dataset size, we reduced to it's size by eliminating any artist with less than 1000 listens. 
 ```{r spread_data, cache=TRUE}
 num_listens <- 1000
 
@@ -62,20 +69,10 @@ dim(user.artists)
 ```
 
 
-For development, work with a smaller matrix. Set eval = FALSE for final rendering. 
-```{r, eval=TRUE, , cache=TRUE}
-#note - perhaps this should select randomly instead of the first 1000 rows / 500 columns?
-#user.artists <- user.artists[1:200, 1:500]
+# Calculating Similarity using the 'recommenderlab' package  
 
-user.artists.colSums <- colSums(user.artists, na.rm=TRUE)
-
-summary(user.artists.colSums)
-```
-
-
-# Calculating Similarity using the 'recommenderlab' package
+First, we used the recommenderlab package to compute the similiarity matrix for artists. 
 ```{r reclab_sim_matrix, cache=TRUE}
-#note this is takes a few minutes to compute
 user.artists.RRM <- new("realRatingMatrix", data = as(user.artists, "CsparseMatrix"))
 
 #reclab.similarity.user <- similarity(user.artists.RRM, method = "cosine", which = "users")
@@ -84,29 +81,41 @@ reclab.similarity.item <- similarity(user.artists.RRM, method = "cosine", which 
 reclab.sim.item.matrix <- as.matrix(reclab.similarity.item)
 ```
 
+
+
 ```{r sim_matrix, cache=TRUE}
 #image(as.matrix(reclab.similarity.user))
 image(reclab.sim.item.matrix)
 ```
 
+
+Let's take a look at artist similar to the band Beach House. Beach House is a fairly obscure indie rock band that plays a sub-genre called 'chill wave'. As expected, the similar artists specified by the similarity matrix tend to be obscure indie rock bands, some of which also play chill wave (e.g. Best Coast).
 ```{r reclab_recommendations_1, cache=TRUE}
-#Old-school hiphop band A Tribe Called Quest's similar listens
-ATribeCalledQuest.sim.row <- reclab.sim.item.matrix["Beach House",]
+beachhouse.sim.row <- reclab.sim.item.matrix["Beach House",]
 
-ATribeCalledQuest.similar.listens <- ATribeCalledQuest.sim.row[complete.cases(ATribeCalledQuest.sim.row)]
+beachhouse.similar.listens <- beachhouse.sim.row[complete.cases(beachhouse.sim.row)]
 
-#Several similar artists - De La Soul, Beck, Sade are in the same genre
-sort(ATribeCalledQuest.similar.listens, decreasing = TRUE)[1:20]
+sort(beachhouse.similar.listens, decreasing = TRUE)[1:20]
 ```
 
+
+Looking at a more well known rock band, Nine Inch Nails, we tend to find similar artists in the metal genre.
 ```{r artist_recommendations_2}
-#Old-school hiphop band A Tribe Called Quest's similar listens
-ATribeCalledQuest.sim.row <- reclab.sim.item.matrix["Nine Inch Nails",]
+nin.sim.row <- reclab.sim.item.matrix["Nine Inch Nails",]
 
-ATribeCalledQuest.similar.listens <- ATribeCalledQuest.sim.row[complete.cases(ATribeCalledQuest.sim.row)]
+nin.similar.listens <- nin.sim.row[complete.cases(nin.sim.row)]
 
-#Several similar artists - De La Soul, Beck, Sade are in the same genre
-sort(ATribeCalledQuest.similar.listens, decreasing = TRUE)[1:20]
+sort(nin.similar.listens, decreasing = TRUE)[1:20]
+```
+
+
+By searching similar artist to Britney Spears we find some sensible similar artists (e.g. Kylie Minogue, Ashlee Simpson). However, our second highest similarity is a band called "†‡† " or "Ritualz" which makes obscure experimental electronic music. This will warrant more exploration. 
+```{r artist_recommendations_2..2}
+nin.sim.row <- reclab.sim.item.matrix["Britney Spears",]
+
+nin.similar.listens <- nin.sim.row[complete.cases(nin.sim.row)]
+
+sort(nin.similar.listens, decreasing = TRUE)[1:20]
 ```
 
 # Calculating Similiarity using built-in Matrix Algebra Functions
@@ -123,7 +132,7 @@ image(as.matrix(user.artists))
 ```
 
 # Calculate Similarity using our own Cosine Distance Algorithm 
-```{r custom_similarity_function}
+```{r custom_similarity_function, eval = F}
 euc_distance <- function(x) {
   return (sqrt(sum(x^2,na.rm=TRUE)))
 }
@@ -162,7 +171,7 @@ cos_sim_matrix(movie)
 cos_sim_matrix(t(movie))
 ```
 
-```{r custom_sim_matrix, warning=FALSE}
+```{r custom_sim_matrix, warning=FALSE, eval=F}
 #Results should match Item-Item CF tab
 custom.similarity.item <- cos_sim_matrix(user.artists)
 
@@ -170,7 +179,7 @@ custom.similarity.item <- cos_sim_matrix(user.artists)
 #custom.similarity.user <- cos_sim_matrix(t(user.artists))
 ```
 
-```{r custom_artist_recommendations_1}
+```{r custom_artist_recommendations_1, eval=F}
 recommendation.custom <- custom.similarity.item["Beach House",]
 recommendation.custom <- as.matrix(t(recommendation.custom))
 
@@ -183,7 +192,7 @@ recommendation.custom <- recommendation.custom[recommendation.custom<0.99]
 sort(recommendation.custom, decreasing = TRUE)
 ```
 
-```{r custom_artist_recommendations_2}
+```{r custom_artist_recommendations_2, eval=F}
 recommendation.custom <- custom.similarity.item["Nine Inch Nails",]
 recommendation.custom <- as.matrix(t(recommendation.custom))
 
@@ -194,4 +203,40 @@ recommendation.custom <- recommendation.custom[!(apply(recommendation.custom, 1,
 recommendation.custom <- recommendation.custom[recommendation.custom<0.99]
 
 sort(recommendation.custom, decreasing = TRUE)
+```
+
+
+# Artist Recommender
+
+```{r, echo = FALSE}
+
+similarity.recommender <-  as.data.frame(reclab.sim.item.matrix) %>% add_rownames("artist")
+```
+
+```{r}
+
+shinyApp(
+  
+  ui = fluidPage(
+    fluidRow(
+    selectInput("artist", "Select Artist:", selected = "Beach House",
+                choices = colnames(reclab.sim.item.matrix))),
+    fluidRow(
+      tableOutput("table"))
+  ),
+  
+  server = function(input, output) {
+    
+    output$table <- renderTable({
+
+      data <- similarity.recommender %>%
+        filter(artist == input$artist) %>%
+        sort(decreasing = TRUE) %>%
+        top_n(20)
+      
+    })
+  },
+  
+  options = list(height = 500)
+)
 ```

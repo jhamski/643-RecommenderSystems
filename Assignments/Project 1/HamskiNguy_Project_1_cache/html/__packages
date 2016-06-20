@@ -7,3 +7,5 @@ recommenderlab
 dplyr
 tidyr
 ggplot2
+shiny
+webshot
