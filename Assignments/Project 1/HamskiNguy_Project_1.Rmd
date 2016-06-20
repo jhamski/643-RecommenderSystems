@@ -12,11 +12,11 @@ require(shiny)
 require(webshot)
 
 
-library(recommenderlab)
-library(Matrix)
-library(dplyr)
-library(tidyr)
-library(ggplot2)
+require(recommenderlab)
+require(Matrix)
+require(dplyr)
+require(tidyr)
+require(ggplot2)
 
 options(scipen=999)
 ```
@@ -60,7 +60,7 @@ ggplot(user.artists.pairwise, aes(x = weight)) + geom_density() + theme_bw() + s
 
 Using the TidyR library. The pairwise data was converted into a sparse matrix. Due to dataset size, we reduced to it's size by eliminating any artist with less than 1000 listens. 
 ```{r spread_data, cache=TRUE}
-num_listens <- 1000
+num_listens <- 5000
 
 user.artists.matrix <- user.artists.pairwise %>%
   filter(weight > num_listens) %>% #filter artists with less than num_listens listens
@@ -92,7 +92,7 @@ image(reclab.sim.item.matrix)
 ```
 
 
-Let's take a look at artist similar to the band Beach House. Beach House is a fairly obscure indie rock band that plays a sub-genre called 'chill wave'. As expected, the similar artists specified by the similarity matrix tend to be obscure indie rock bands, some of which also play chill wave (e.g. Best Coast).
+Let's take a look at artist similar to the band Beach House. Beach House is a fairly obscure indie rock band that plays a sub-genre called 'chill wave'. As expected, the similar artists specified by the similarity matrix tend to be obscure indie rock bands, some of which also play chill wave (e.g. Wavves).
 ```{r reclab_recommendations_1, cache=TRUE}
 beachhouse.sim.row <- reclab.sim.item.matrix["Beach House",]
 
@@ -112,7 +112,7 @@ sort(nin.similar.listens, decreasing = TRUE)[1:20]
 ```
 
 
-By searching similar artist to Britney Spears we find some sensible similar artists (e.g. Kylie Minogue, Ashlee Simpson). However, our second highest similarity is a band called "†‡† " or "Ritualz" which makes obscure experimental electronic music. This will warrant more exploration. 
+By searching similar artist to Britney Spears we find some sensible similar artists (e.g.Beyoncé). However, our second highest similarity is a band called "†‡† " or "Ritualz" which makes obscure experimental electronic music. This will warrant more exploration. 
 ```{r artist_recommendations_2..2}
 nin.sim.row <- reclab.sim.item.matrix["Britney Spears",]
 
@@ -135,7 +135,7 @@ image(as.matrix(user.artists))
 ```
 
 # Calculate Similarity using our own Cosine Distance Algorithm 
-```{r custom_similarity_function, eval = F}
+```{r custom_similarity_function, eval = T}
 euc_distance <- function(x) {
   return (sqrt(sum(x^2,na.rm=TRUE)))
 }
@@ -161,7 +161,7 @@ cos_sim_matrix <- function(x) {
 ```
 
 
-```{r, eval=F}
+```{r, eval=T}
 #Test case to validate results. Using toy dataset from meetup. Set to false before final rendering.
 movie <- read.csv('UBCF.csv', header = TRUE, stringsAsFactors = FALSE)
 rownames(movie) <- movie[,1]
@@ -174,7 +174,7 @@ cos_sim_matrix(movie)
 cos_sim_matrix(t(movie))
 ```
 
-```{r custom_sim_matrix, warning=FALSE, eval=F}
+```{r custom_sim_matrix, warning=FALSE, eval=T}
 #Results should match Item-Item CF tab
 custom.similarity.item <- cos_sim_matrix(user.artists)
 
@@ -182,7 +182,7 @@ custom.similarity.item <- cos_sim_matrix(user.artists)
 #custom.similarity.user <- cos_sim_matrix(t(user.artists))
 ```
 
-```{r custom_artist_recommendations_1, eval=F}
+```{r custom_artist_recommendations_1, eval=T}
 recommendation.custom <- custom.similarity.item["Beach House",]
 recommendation.custom <- as.matrix(t(recommendation.custom))
 
@@ -195,7 +195,7 @@ recommendation.custom <- recommendation.custom[recommendation.custom<0.99]
 sort(recommendation.custom, decreasing = TRUE)
 ```
 
-```{r custom_artist_recommendations_2, eval=F}
+```{r custom_artist_recommendations_2, eval=T}
 recommendation.custom <- custom.similarity.item["Nine Inch Nails",]
 recommendation.custom <- as.matrix(t(recommendation.custom))
 
@@ -211,12 +211,12 @@ sort(recommendation.custom, decreasing = TRUE)
 
 # Artist Recommender
 
-```{r, echo = FALSE}
+```{r, echo=FALSE}
 
 similarity.recommender <-  as.data.frame(reclab.sim.item.matrix) %>% add_rownames("artist")
 ```
 
-```{r}
+```{r, echo=FALSE}
 
 shinyApp(
   
