@@ -29,7 +29,7 @@ Using Last.fm data we will build a simple recommender system that will recommend
 [Last.FM](http://grouplens.org/datasets/hetrec-2011/) data from grouplens.org. The dataset we are interested in is the 'user_artists.dat' data file. This file contains the artists listened by each user. It also provides a listening count for each [user, artist] pair.  
 
 Reading in needed datasets. Artist information will be joined to user-artist dataset for readability
-```{r Read_Dataset, cache=TRUE}
+```{r Read_Dataset, cache=TRUE, warnings = FALSE}
 user.artists.pairwise <- read.delim('hetrec2011-lastfm-2k/user_artists.dat', sep="\t")
 
 artists <- read.delim('hetrec2011-lastfm-2k/artists.dat', sep="\t") %>%
