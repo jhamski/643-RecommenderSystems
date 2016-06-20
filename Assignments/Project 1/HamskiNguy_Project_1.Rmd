@@ -85,7 +85,6 @@ reclab.sim.item.matrix <- as.matrix(reclab.similarity.item)
 ```
 
 
-
 ```{r sim_matrix, cache=TRUE}
 #image(as.matrix(reclab.similarity.user))
 image(reclab.sim.item.matrix)
@@ -160,39 +159,23 @@ cos_sim_matrix <- function(x) {
 }
 ```
 
-
-```{r, eval=T}
-#Test case to validate results. Using toy dataset from meetup. Set to false before final rendering.
-movie <- read.csv('UBCF.csv', header = TRUE, stringsAsFactors = FALSE)
-rownames(movie) <- movie[,1]
-movie <- movie[,-1]
-
-#Results should match Item-Item CF tab
-cos_sim_matrix(movie)
-
-#Results should match User-User CF tab
-cos_sim_matrix(t(movie))
-```
-
 ```{r custom_sim_matrix, warning=FALSE, eval=T}
-#Results should match Item-Item CF tab
 custom.similarity.item <- cos_sim_matrix(user.artists)
 
-#Results should match User-User CF tab
 #custom.similarity.user <- cos_sim_matrix(t(user.artists))
 ```
 
 ```{r custom_artist_recommendations_1, eval=T}
-recommendation.custom <- custom.similarity.item["Beach House",]
+recommendation.custom <- custom.similarity.item["50 Cent",]
 recommendation.custom <- as.matrix(t(recommendation.custom))
 
 #Remove records with no score
 recommendation.custom <- recommendation.custom[!(apply(recommendation.custom, 1, function(y) any(y == 0))),]
 
 #Remove 'identity recommendation'
-recommendation.custom <- recommendation.custom[recommendation.custom<0.99]
+recommendation.custom <- recommendation.custom[round(recommendation.custom, 6)<1]
 
-sort(recommendation.custom, decreasing = TRUE)
+sort(recommendation.custom, decreasing = TRUE)[1:10]
 ```
 
 ```{r custom_artist_recommendations_2, eval=T}
@@ -203,9 +186,9 @@ recommendation.custom <- as.matrix(t(recommendation.custom))
 recommendation.custom <- recommendation.custom[!(apply(recommendation.custom, 1, function(y) any(y == 0))),]
 
 #Remove 'identity recommendation'
-recommendation.custom <- recommendation.custom[recommendation.custom<0.99]
+recommendation.custom <- recommendation.custom[round(recommendation.custom, 6)<1]
 
-sort(recommendation.custom, decreasing = TRUE)
+sort(recommendation.custom, decreasing = TRUE)[1:10]
 ```
 
 
