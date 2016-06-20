@@ -7,13 +7,16 @@ runtime: shiny
 ---
 
 ```{r load_libraries, warning = FALSE, error = FALSE, message=FALSE, cache = TRUE}
+require(codetools)
+require(shiny)
+require(webshot)
+
+
 library(recommenderlab)
 library(Matrix)
 library(dplyr)
 library(tidyr)
 library(ggplot2)
-require(shiny)
-library(webshot)
 
 options(scipen=999)
 ```
