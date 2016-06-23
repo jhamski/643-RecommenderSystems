@@ -2,8 +2,8 @@ name: RecommenderProject-1
 account: jhamski
 server: shinyapps.io
 appId: 109498
-bundleId: 484141
+bundleId: 485776
 url: https://jhamski.shinyapps.io/RecommenderProject-1/
-when: 1466384869.94724
+when: 1466543275.3268
 asMultiple: FALSE
 asStatic: FALSE

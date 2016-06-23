@@ -1,0 +1,16 @@
+---
+title: 'Project #2 - Recommender Systems'
+author: "J. Hamski, V. Nguy"
+date: "June 22, 2016"
+output: html_document
+---
+
+The goal of this assignment is for you to try out different ways of implementing and configuring a recommender, and to evaluate your different approaches.
+
+For project 2, you’re asked to take some recommendation data (such as your toy movie dataset, Movielens, or another Dataset of your choosing), and implement at least two different recommendation algorithms on the data.  For example, content-based, user-user CF, and/or item-item CF.  You should evaluate different approaches, using different algorithms, normalization techniques, similarity methods, neighborhood sizes, etc.  You don’t need to be exhaustive—these are just some suggested possibilities.  You may use whatever third party libraries you want.  Please provide at least one graph, and a textual summary of your evaluation.
+
+
+```{r}
+
+```
+
