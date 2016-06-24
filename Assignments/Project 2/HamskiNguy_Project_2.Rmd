@@ -24,6 +24,23 @@ require(ggplot2)
 user.artists.pairwise <- readRDS("user_artists_pairwise.RDS")
 ```
 
+Normalize Data  
+
+A = Min Value  
+B = Max Value  
+a = min (range)  
+b = max (range) 
+
+a+(x-A)(b-a)/(B-A)  
+
+Perform Item-Item content filtering. This time we normalize the data and other enhancements to try to improve recommendations from project 1
+```{r}
+
+
+```
+
+
+
 ```{r}
 user.taggedartist <- read.delim('hetrec2011-lastfm-2k/user_taggedartists.dat', sep="\t")
 tags <- read.delim('hetrec2011-lastfm-2k/tags.dat', sep="\t")
