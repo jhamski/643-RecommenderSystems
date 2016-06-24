@@ -11,6 +11,24 @@ For project 2, you’re asked to take some recommendation data (such as your toy
 
 
 ```{r}
+require(dplyr)
+```
 
+# Description
+[Last.fm](http://www.lastfm.com), a web application which allows users to track what music they play on their computer or mobile devices, released a listener dataset from 2006. [Dataset information](http://files.grouplens.org/datasets/hetrec2011/hetrec2011-lastfm-readme.txt)
+
+
+```{r}
+#use a file from the other dataset
+user.artists.pairwise <- readRDS("user_artists_pairwise.RDS")
+```
+
+```{r}
+user.taggedartist <- read.delim('hetrec2011-lastfm-2k/user_taggedartists.dat', sep="\t")
+tags <- read.delim('hetrec2011-lastfm-2k/tags.dat', sep="\t")
+```
+
+```{r}
+user.taggedartist <- inner_join(user.taggedartist, tags, by = "tagID")
 ```
 
