@@ -12,6 +12,7 @@ For project 2, you’re asked to take some recommendation data (such as your toy
 
 ```{r}
 require(dplyr)
+require(ggplot2)
 ```
 
 # Description
@@ -30,5 +31,18 @@ tags <- read.delim('hetrec2011-lastfm-2k/tags.dat', sep="\t")
 
 ```{r}
 user.taggedartist <- inner_join(user.taggedartist, tags, by = "tagID")
+length(user.taggedartist$tagValue)
+```
+
+```{r}
+tag.count.80plus <- user.taggedartist %>% 
+  count(tagValue) %>% 
+  arrange(desc(n)) %>%
+  filter(n >= 80)
+
+user.taggedartist <- user.taggedartist %>%
+  filter(tagValue %in% tag.count.80plus$tagValue)
+
+length(user.taggedartist$tagValue)
 ```
 
