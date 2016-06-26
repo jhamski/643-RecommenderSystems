@@ -129,40 +129,42 @@ rock.test <- tags.by.artist %>%
   select(name)
 
 # make sure this output makes sense
-rock.test$name[1:15]
+rock.test$name[1:10]
 ```
 
-```{r, echo=FALSE}
-tag.options <- as.list(unique(tags.by.artist$tagValue))
+Here, we use Shiny to simulate a 'cold start' recommendation using artist tags. A new user, for which we have no listening history (therefore we can't use collaborative filtering) comes to our recommender interface and is asked to select a few tags that reflect their taste in music. 
+```{r, echo=TRUE}
+tag.options <- tags.by.artist$tagValue %>%
+  unique() %>%
+  as.character()
+
 
 shinyApp(
   
   ui = fluidPage(
     fluidRow(
-    selectInput('tag', 'Begin typing a tag (example: rock)', as.character(tag.options), multiple=TRUE, selectize=TRUE),
+    selectInput('tag', 'Begin typing a tag (example: rock)', tag.options, multiple=TRUE, selectize=TRUE, selected="rock"),
     fluidRow(
-      tableOutput("table")),
-    fluidRow(
-      verbatimTextOutput('tags')
-    )
+      verbatimTextOutput("artist.list"))
   )
   ),
   server = function(input, output) {
-    output$tags <- renderPrint(input$tag)
-    
-    output$table <- renderTable({
+
+    output$artist.list <- renderPrint({
 
         data <- tags.by.artist %>%
-          filter(tagValue == tag.options[6001]) %>%
+          filter(tagValue %in% unlist(input$tag)) %>%
           arrange(desc(n)) %>%
-          select(name)
-      
+          select(name, n)
+        data
     })
   },
   
   options = list(height = 500)
 )
 ```
+
+
 
 # Recommender #2 - Return Artist Based on Tag Density
 
