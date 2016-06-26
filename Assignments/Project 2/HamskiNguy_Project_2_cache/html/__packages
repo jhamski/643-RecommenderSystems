@@ -5,3 +5,7 @@ ggplot2
 tidyr
 knitr
 Matrix
+arules
+proxy
+registry
+recommenderlab
