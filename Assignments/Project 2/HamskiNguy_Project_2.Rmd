@@ -97,7 +97,7 @@ NickCaveBadSeeds.tags <- user.taggedartist %>%
   select(name, tagValue) %>%
   count(tagValue) %>%
   arrange(desc(n))
-kable(NickCaveBadSeeds.tags)
+kable(NickCaveBadSeeds.tags)[1:10]
 ```
 
 We can also view a more genre-specific artist like Ludacris, a rapper who has 22 tags in the dataset. Luudacris's tags also exemplify another issue with using tag for recommendations - poor data quality. Both "hip hop" and "hip-hop" are separate tags, which if added together, would overtake "rap" as the most popular tag. Ideally, before using tags as a recommendation data source we would perform text modification methods such as stemming and removing select characters - however this will have to wait for another project.  
@@ -108,7 +108,7 @@ Ludacris.tags <- user.taggedartist %>%
   select(name, tagValue) %>%
   count(tagValue) %>%
   arrange(desc(n))
-kable(Ludacris.tags)
+kable(Ludacris.tags)[1:10]
 ```
 
 Despite the example shown, raw number of tags should not be interpreted as the artist's genre-diversity. The willingness of one artist's fanbase to use and add tags may influence the tags more than a feature related to the artist's music itself.  
@@ -132,7 +132,7 @@ rock.test <- tags.by.artist %>%
 rock.test$name[1:10]
 ```
 
-Here, we use Shiny to simulate a 'cold start' recommendation using artist tags. A new user, for which we have no listening history (therefore we can't use collaborative filtering) comes to our recommender interface and is asked to select a few tags that reflect their taste in music. 
+Here, we use Shiny to simulate a 'cold start' recommendation using artist tags. A new user, for which we have no listening history (therefore we can't use collaborative filtering) comes to our recommender interface and is asked to select a few tags that reflect their taste in music.   
 ```{r, echo=TRUE}
 tag.options <- tags.by.artist$tagValue %>%
   unique() %>%
