@@ -1,0 +1,83 @@
+---
+title: 'Project #2 - Recommender Systems'
+author: "J. Hamski, V. Nguy"
+date: "June 22, 2016"
+output: html_document
+---
+
+The goal of this assignment is for you to try out different ways of implementing and configuring a recommender, and to evaluate your different approaches.
+
+For project 2, you’re asked to take some recommendation data (such as your toy movie dataset, Movielens, or another Dataset of your choosing), and implement at least two different recommendation algorithms on the data.  For example, content-based, user-user CF, and/or item-item CF.  You should evaluate different approaches, using different algorithms, normalization techniques, similarity methods, neighborhood sizes, etc.  You don’t need to be exhaustive—these are just some suggested possibilities.  You may use whatever third party libraries you want.  Please provide at least one graph, and a textual summary of your evaluation.
+
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(recommenderlab)
+```
+
+# Description
+[Last.fm](http://www.lastfm.com), a web application which allows users to track what music they play on their computer or mobile devices, released a listener dataset from 2006. [Dataset information](http://files.grouplens.org/datasets/hetrec2011/hetrec2011-lastfm-readme.txt)
+
+
+```{r}
+#Read in CSV files
+user.artists.pairwise <- read.delim('hetrec2011-lastfm-2k/user_artists.dat', sep="\t")
+artists <- read.delim('hetrec2011-lastfm-2k/artists.dat', sep="\t") %>%
+  select(id, name)
+```
+
+```{r}
+colnames(artists) <- c("artistID", "name")
+user.artists.pairwise <- inner_join(user.artists.pairwise, artists, by="artistID")
+user.artists.pairwise <- select(user.artists.pairwise, -artistID)
+user.artists.pairwise$name <- strtrim(user.artists.pairwise$name, 100)
+user.artists.pairwise[16060,]$name <- NA
+
+#Spread data to make sparse matrix
+user.artists.matrix <- user.artists.pairwise %>%
+  spread(key = name, value = weight) %>%
+  as.matrix()
+
+#Remove artist ID column
+user.artists <- user.artists.matrix[,c(-1)]
+
+#replace with zero
+#user.artists[is.na(user.artists)] = 0
+```
+
+
+Work with data that where the user listened to atleast 45 artists and artists that were listened to by atleast 50 users
+```{r}
+user.artists.RRM <- as(user.artists,"realRatingMatrix")
+user.ratings <- user.artists.RRM[rowCounts(user.artists.RRM) > 45, colCounts(user.artists.RRM) > 50]
+
+#dim(user.ratings)
+#user.ratings.norm <- normalize(user.ratings)
+#sum(rowMeans(user.ratings.norm) > 0.00001)
+```
+
+Create training and test sets
+```{r}
+training <- sample(x=c(TRUE, FALSE), size=nrow(user.ratings), replace=TRUE, prob=(c(0.85,0.15)))
+rating.train <- user.ratings[training,]
+rating.test <- user.ratings[!training,]
+```
+
+Create a model that provides the top 5 recommendations
+```{r}
+rec.model <- Recommender(data=rating.train, method="IBCF", parameter = list(k=5))
+```
+
+```{r}
+rec.predict <- predict(object=rec.model, newdata=rating.test, n=5)
+rec.predict@items[1]
+```
+
+Prediction for first user
+```{r}
+rec_1 <- rec.predict@items[[1]]
+artist.predict <- rec.predict@itemLabels[rec_1]
+artist.predict
+```
