@@ -10,13 +10,15 @@ The goal of this assignment is for you to try out different ways of implementing
 For project 2, you’re asked to take some recommendation data (such as your toy movie dataset, Movielens, or another Dataset of your choosing), and implement at least two different recommendation algorithms on the data.  For example, content-based, user-user CF, and/or item-item CF.  You should evaluate different approaches, using different algorithms, normalization techniques, similarity methods, neighborhood sizes, etc.  You don’t need to be exhaustive—these are just some suggested possibilities.  You may use whatever third party libraries you want.  Please provide at least one graph, and a textual summary of your evaluation.
 
 
-```{r}
+```{r, warning=FALSE, message=FALSE}
 require(dplyr)
 require(ggplot2)
+require(tidyr)
+require(knitr)
 ```
 
 # Description
-[Last.fm](http://www.lastfm.com), a web application which allows users to track what music they play on their computer or mobile devices, released a listener dataset from 2006. [Dataset information](http://files.grouplens.org/datasets/hetrec2011/hetrec2011-lastfm-readme.txt)
+[Last.fm](http://www.lastfm.com), a web application which allows users to track what music they play on their computer or mobile devices, released a listener dataset from 2006. [Dataset information](http://files.grouplens.org/datasets/hetrec2011/hetrec2011-lastfm-readme.txt)  
 
 
 ```{r}
@@ -24,33 +26,23 @@ require(ggplot2)
 user.artists.pairwise <- readRDS("user_artists_pairwise.RDS")
 ```
 
-Normalize Data  
-
-A = Min Value  
-B = Max Value  
-a = min (range)  
-b = max (range) 
-
-a+(x-A)(b-a)/(B-A)  
-
-Perform Item-Item content filtering. This time we normalize the data and other enhancements to try to improve recommendations from project 1
-```{r}
-
-
-```
-
-
-
+The Last.fm dataset contains an array of artist tags. These are voluntarily contributed by arists and are most frequently genres like 'rock' or 'country'. Here, we read in the user-supplied tags dataset and a key that gives the 
 ```{r}
 user.taggedartist <- read.delim('hetrec2011-lastfm-2k/user_taggedartists.dat', sep="\t")
 tags <- read.delim('hetrec2011-lastfm-2k/tags.dat', sep="\t")
 ```
 
+
+# Exploring the Dataset
+
+The tag dataset includes 186,479 tags. It inlcudes the user id, and timestamp of the tag, the artist tagged, and the tag given. 
 ```{r}
 user.taggedartist <- inner_join(user.taggedartist, tags, by = "tagID")
 length(user.taggedartist$tagValue)
+str(user.taggedartist)
 ```
 
+In order to make this dataset more managable, we limit it to tags which have at least 80 occurances. Because the tags are user-derived, there is an extremely long tail of less than useful tags (e.g. "jimsfavoriteband"). The top 80 tags includes many genre tags we would expect to be useful (e.g. "rock", "dance") and leaves us with a dataset of 138,243 total tags. 
 ```{r}
 tag.count.80plus <- user.taggedartist %>% 
   count(tagValue) %>% 
@@ -61,5 +53,67 @@ user.taggedartist <- user.taggedartist %>%
   filter(tagValue %in% tag.count.80plus$tagValue)
 
 length(user.taggedartist$tagValue)
+tag.count.80plus[1:15,]
+```
+
+
+Here we create a column of actual artist names in addition to numeric ideas. 
+```{r}
+user.artist.key <- user.artists.pairwise %>%
+  unique() %>%
+  select(artistID, name)
+
+user.taggedartist <- left_join(user.taggedartist, user.artist.key, by = "artistID")
+```
+
+There are 8,437 artists which have tags. 
+```{r}
+user.taggedartist$name <- as.factor(user.taggedartist$name)
+(tagged.artists <- length(unique(user.taggedartist$name)))
+```
+
+However, our user-artist data includes 14,036 artists. 
+```{r}
+(user.record.artists <- length(unique(user.artists.pairwise$name)))
+```
+
+Most of these are fairly obscure artists. 
+```{r}
+no.tags <- !(unique(user.artists.pairwise$name) %in% unique(user.taggedartist$name))
+unique.artists <- unique(user.artists.pairwise$name)
+no.tags <- unique.artists[no.tags]
+
+no.tags[1:30]
+```
+
+Let's check the tags for a few artists to make sure they make sense. Nick Cave and the Bad Seeds is a genre-diverse band and have 44 user-defined tags.   
+```{r, fig.width=3}
+NickCaveBadSeeds.tags <- user.taggedartist %>%
+  filter(name == "Nick Cave and the Bad Seeds") %>%
+  select(name, tagValue) %>%
+  count(tagValue) %>%
+  arrange(desc(n))
+kable(NickCaveBadSeeds.tags)
+```
+
+We can also view a more genre-specific artist like Ludacris, a rapper who has 22 tags in the dataset. Luudacris's tags also exemplify another issue with using tag for recommendations - poor data quality. Both "hip hop" and "hip-hop" are separate tags, which if added together, would overtake "rap" as the most popular tag. Ideally, before using tags as a recommendation data source we would perform text modification methods such as stemming and removing select characters - however this will have to wait for another project.  
+
+```{r}
+Ludacris.tags <- user.taggedartist %>%
+  filter(name == "Ludacris") %>%
+  select(name, tagValue) %>%
+  count(tagValue) %>%
+  arrange(desc(n))
+kable(Ludacris.tags)
+```
+
+Despite the example shown, raw number of tags should not be interpreted as the artist's genre-diversity. The willingness of one artist's fanbase to use and add tags may influence the tags more than a feature related to the artist's music itself.  
+
+
+# Recommender #1 - Return Artist Based on Tag Frequency
+
+
+```{r}
+
 ```
 
