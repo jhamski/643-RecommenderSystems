@@ -161,37 +161,28 @@ This second recommendation system recommends artists to the user based on tag-fr
 
 First, we create a sparse matrix with the frequency of tags. The rows are the tag IDs and the columns are artists. Because the sparseMatrix datatype does not accomodate character row/column names, we'll need to translate them later. 
 ```{r, eval=FALSE}
-tags.by.artist <- user.taggedartist %>% group_by(tagID, artistID) %>% tally()
-#artist.tags.sparse <- sparseMatrix(tags.by.artist$tagID, tags.by.artist$artistID, x = tags.by.artist$n)
+tags.by.artist <- user.taggedartist %>% group_by(tagValue, name) %>% tally()
 
-# http://stackoverflow.com/questions/9617348/reshape-three-column-data-frame-to-matrix
-x <- tags.by.artist$tagID
-y <- tags.by.artist$artistID
-z = tags.by.artist$n
+artist.tags <- spread(tags.by.artist, name, n)
 
-artist.tags <- with(tags.by.artist, sparseMatrix(i = as.numeric(x), j=as.numeric(y), x=z, dimnames=list(levels(x), levels(y))))
+artist.tags[is.na(artist.tags)] <- 0
 
-artist.tags <- as.matrix(artist.tags)
+tags <- artist.tags[,1]
+rownames(artist.tags) <- tags[[1]]
+artist.tags <- artist.tags[,-1]
 ```
 
-```{r, eval=FALSE}
-length(tags.by.artist$n)
-nnzero(tags.by.artist)
-```
-
-
+Now, the dimensions are equal to the number of unique tags and unique artists. 
 ```{r, eval=FALSE}
 dim(artist.tags)
-length(unique(tags.by.artist$tagID))
 ```
-
 
 I used the vector space model demonstrated in the [Build a search engine in 20 minutes or less](http://anythingbutrbitrary.blogspot.com/2013/03/build-search-engine-in-20-minutes-or.html) tutorial as a guide for this section.  
 This tutorial notes that we can 'boost' more obscure terms by using a square root or log transformation on word count frequencies instead of an untransformed, linear 
 
 ```{r, eval=FALSE}
 # chunk modified from: http://anythingbutrbitrary.blogspot.com/2013/03/build-search-engine-in-20-minutes-or.html
-n.bands <- length(unique(tags.by.artist$artistID))
+n.bands <- ncol(artist.tags)
 
 get.tf.idf.weights <- function(tf.vec, df) {
     # Computes tfidf weights from a term frequency vector and a document
@@ -201,7 +192,7 @@ get.tf.idf.weights <- function(tf.vec, df) {
     weight
 }
 
-get.tf.idf.weights(c(1, 2, 3, 0, 0, 6), 4)
+#get.tf.idf.weights(c(1, 2, 3, 0, 0, 6), 4)
 
 get.weights.per.term.vec <- function(tfidf.row) {
     term.df <- sum(tfidf.row[1:n.bands] > 0)
@@ -211,30 +202,33 @@ get.weights.per.term.vec <- function(tfidf.row) {
 
 #this takes several minutes on a Macbook Air
 
+tfidf.matrix <- t(apply(artist.tags, c(1), FUN = get.weights.per.term.vec))
 
-
-
-tfidf.matrix <- t(apply(artist.tags, 1, FUN = get.weights.per.term.vec))
-
-colnames(tfidf.matrix) <- colnames(unique(tags.by.artist$artistID))
-
-artist.tags[0:40,1:15]
+dim(tfidf.matrix)
+colnames(tfidf.matrix) <- colnames(artist.tags)
+rownames(tfidf.matrix) <- rownames(artist.tags)
 ```
 
 
 Now, compute the cosine similarity between a query vector of rock, indie rock, and post rock and the tag frequency matrix.  
 ```{r, eval=FALSE}
-# rock, indie rock, post rock 
-query.vector <- rep(0, length(tfidf.matrix[,1]))
-query.vector[73] <- 1
-query.vector[84] <- 1
-query.vector[821] <- 1
+rownames(artist.tags) <- tags[[1]]
 
+n.tags <- nrow(artist.tags)
+# rock, punk
+query.vector <- rep(0, n.tags)
+query.vector[411] <- 1
+query.vector[392] <- 1
 
 artist.scores <- t(query.vector) %*% tfidf.matrix
 
-length(artist.scores)
+artist.scores <- t(artist.scores)
+
 ```
+
+
+
+
 
 # Recommender #3 
 
