@@ -12,15 +12,12 @@ For project 2, you’re asked to take some recommendation data (such as your toy
 
 
 ```{r, warning=FALSE, message=FALSE, cache=TRUE}
-require(codetools)
 require(shiny)
-require(webshot)
-
 require(dplyr)
 require(ggplot2)
 require(tidyr)
 require(knitr)
-require(Matrix)
+#require(Matrix)
 require(recommenderlab)
 ```
 
@@ -160,7 +157,7 @@ This recommendation engine is undesireable because it just reflects the most pop
 This second recommendation system recommends artists to the user based on tag-frequency using a vector space model. 
 
 First, we create a sparse matrix with the frequency of tags. The rows are the tag IDs and the columns are artists. Because the sparseMatrix datatype does not accomodate character row/column names, we'll need to translate them later. 
-```{r, eval=FALSE}
+```{r, eval=TRUE}
 tags.by.artist <- user.taggedartist %>% group_by(tagValue, name) %>% tally()
 
 artist.tags <- spread(tags.by.artist, name, n)
@@ -173,14 +170,14 @@ artist.tags <- artist.tags[,-1]
 ```
 
 Now, the dimensions are equal to the number of unique tags and unique artists. 
-```{r, eval=FALSE}
+```{r, eval=TRUE}
 dim(artist.tags)
 ```
 
 I used the vector space model demonstrated in the [Build a search engine in 20 minutes or less](http://anythingbutrbitrary.blogspot.com/2013/03/build-search-engine-in-20-minutes-or.html) tutorial as a guide for this section.  
-This tutorial notes that we can 'boost' more obscure terms by using a square root or log transformation on word count frequencies instead of an untransformed, linear 
+This tutorial notes that we can 'boost' more obscure terms by using a square root or log transformation on word count frequencies instead of an untransformed, linear tag frequency. 
 
-```{r, eval=FALSE}
+```{r, eval=TRUE}
 # chunk modified from: http://anythingbutrbitrary.blogspot.com/2013/03/build-search-engine-in-20-minutes-or.html
 n.bands <- ncol(artist.tags)
 
@@ -211,7 +208,7 @@ rownames(tfidf.matrix) <- rownames(artist.tags)
 
 
 Now, compute the cosine similarity between a query vector of rock, indie rock, and post rock and the tag frequency matrix.  
-```{r, eval=FALSE}
+```{r, eval=TRUE}
 rownames(artist.tags) <- tags[[1]]
 
 n.tags <- nrow(artist.tags)
@@ -223,12 +220,53 @@ query.vector[392] <- 1
 artist.scores <- t(query.vector) %*% tfidf.matrix
 
 artist.scores <- t(artist.scores)
-
 ```
 
+We can now use this method in a Shiny App to test out different combinations of tags. 
+```{r, echo=TRUE}
+shinyApp(
 
+  ui = fluidPage(
+    fluidRow(
+    selectInput('tag', 'Begin typing a tag (example: rock)', tag.options, multiple=TRUE, selectize=TRUE, selected="punk"),
+    fluidRow(
+      verbatimTextOutput("artist.list"))
+  )
+  ),
+  server = function(input, output) {
 
+    output$artist.list <- renderPrint({
+        locations <- which(unlist(tags) %in% unlist(input$tag))
+        query.vector <- rep(0, n.tags)
+        
+        for(i in 1:length(locations)){
+          query.vector[i] <- 1
+        }
+        
+        artist.scores <- t(query.vector) %*% tfidf.matrix
+        
+        artist.scores <- t(artist.scores)
 
+      
+        artists <- rownames(artist.scores)
+
+        artist.scores <- cbind(artists, artist.scores[,1])
+        colnames(artist.scores) <- c("artist", "score")
+        artist.scores <- as.data.frame(artist.scores)
+
+        artist.return <- artist.scores %>%
+          arrange(desc(score))
+
+        artist.return
+        
+    })
+  },
+
+  options = list(height = 500)
+)
+```
+
+It is apparent that the transformation needs more tuning - popular artists with lots of tags still dominate the rankings. 
 
 # Recommender #3 
 
