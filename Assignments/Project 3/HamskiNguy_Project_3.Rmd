@@ -33,11 +33,8 @@ colnames(artists) <- c("artistID", "name")
 #note: one duplicate artist
 #artists$name[duplicated(artists$name)==TRUE]
 user.artists.pairwise <- inner_join(user.artists.pairwise, artists, by="artistID")
-
 user.artists.pairwise <- select(user.artists.pairwise, -artistID)
-
 user.artists.pairwise$name <- strtrim(user.artists.pairwise$name, 100)
-
 user.artists.pairwise[16060,]$name <- NA
 
 #ggplot(user.artists.pairwise, aes(x = weight)) + geom_density() + theme_bw() + scale_x_log10()
@@ -55,8 +52,16 @@ user.artists <- user.artists.matrix[,-1]
 dim(user.artists)
 ```
 
+Replace NAs with zeros and scale.
+```{r}
+user.artists[is.na(user.artists)] <- 0
+user.artists <- scale(user.artists)
+user.artists[is.nan(user.artists)] <- 0
+```
+
 Built-in SVD
 ```{r}
-svd <- svd(user.artists.matrix)
+svd <- svd(user.artists)
+summary(svd)
 ```
 
