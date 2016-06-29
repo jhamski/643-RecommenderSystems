@@ -5,33 +5,58 @@ date: "June 28, 2016"
 output: html_document
 ---
 
-```{r}
-#library(colourlovers)
-library(R.matlab)
-library(Matrix)
-library(dplyr)
+
+```{r, warning=FALSE, message=FALSE, cache=TRUE}
+require(shiny)
+require(dplyr)
+require(ggplot2)
+require(tidyr)
+require(knitr)
+#require(Matrix)
+require(recommenderlab)
 ```
 
+Reading in needed datasets. Artist information will be joined to user-artist dataset for readability
+```{r Read_Dataset, cache=TRUE, warnings = FALSE}
+user.artists.pairwise <- read.delim('hetrec2011-lastfm-2k/user_artists.dat', sep="\t")
 
-```{r}
-data.readin <- readMat("colorCode/data/colorLoversData.mat", sparseMatrixClass = "SparseM")
-data <- data.readin
+artists <- read.delim('hetrec2011-lastfm-2k/artists.dat', sep="\t") %>%
+  select(id, name)
 ```
 
-```{r}
-data$names <- unlist(data$names)
+#Data Preparation
 
-data <- data %>%
-  as.data.frame() 
+Converting from Artist IDs to Artist Names for easier interpretation.
+```{r join_artist_name, cache=TRUE}
+colnames(artists) <- c("artistID", "name")
+
+#note: one duplicate artist
+#artists$name[duplicated(artists$name)==TRUE]
+user.artists.pairwise <- inner_join(user.artists.pairwise, artists, by="artistID")
+
+user.artists.pairwise <- select(user.artists.pairwise, -artistID)
+
+user.artists.pairwise$name <- strtrim(user.artists.pairwise$name, 100)
+
+user.artists.pairwise[16060,]$name <- NA
+
+#ggplot(user.artists.pairwise, aes(x = weight)) + geom_density() + theme_bw() + scale_x_log10()
 ```
 
-## Data Cite
- Datasets and Code for "Color Compatibility From Large Datasets" ACM TOG, Proc. SIGGRAPH 2011
- Peter O'Donovan and Aseem Agarwala and Aaron Hertzmann
- 
- Copyright (c) 2011 Peter O'Donovan
- Distributed under the Creative Commons BY-NC-SA license.
- 
-http://creativecommons.org/licenses/by-nc-sa/2.5/ca/
- 
- Contact: Peter O'Donovan at <odonovan@dgp.toronto.edu>
+```{r, cache=TRUE}
+num_listens = 1000
+
+user.artists.matrix <- user.artists.pairwise %>%
+  filter(weight > num_listens) %>% #filter artists with less than num_listens listens
+  spread(key = name, value = weight) %>%
+  as.matrix()
+
+user.artists <- user.artists.matrix[,-1]
+dim(user.artists)
+```
+
+Built-in SVD
+```{r}
+svd <- svd(user.artists.matrix)
+```
+
