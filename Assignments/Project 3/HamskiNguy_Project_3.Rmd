@@ -1,0 +1,17 @@
+---
+title: 'Recommender Systems - Project #3'
+author: "J. Hamski, V. Nguy"
+date: "June 28, 2016"
+output: html_document
+---
+
+```{r}
+#library(colourlovers)
+library(R.matlab)
+```
+
+
+```{r}
+data <- readMAT("/colorCode/data/colorLoversData.mat")
+```
+

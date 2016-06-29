@@ -1,7 +1,0 @@
----
-title: 'Recommender Systems - Project #3'
-author: "J. Hamski, V. Nguy"
-date: "June 28, 2016"
-output: html_document
----
-
