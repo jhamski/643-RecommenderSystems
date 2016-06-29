@@ -8,10 +8,30 @@ output: html_document
 ```{r}
 #library(colourlovers)
 library(R.matlab)
+library(Matrix)
+library(dplyr)
 ```
 
 
 ```{r}
-data <- readMAT("/colorCode/data/colorLoversData.mat")
+data.readin <- readMat("colorCode/data/colorLoversData.mat", sparseMatrixClass = "SparseM")
+data <- data.readin
 ```
 
+```{r}
+data$names <- unlist(data$names)
+
+data <- data %>%
+  as.data.frame() 
+```
+
+## Data Cite
+ Datasets and Code for "Color Compatibility From Large Datasets" ACM TOG, Proc. SIGGRAPH 2011
+ Peter O'Donovan and Aseem Agarwala and Aaron Hertzmann
+ 
+ Copyright (c) 2011 Peter O'Donovan
+ Distributed under the Creative Commons BY-NC-SA license.
+ 
+http://creativecommons.org/licenses/by-nc-sa/2.5/ca/
+ 
+ Contact: Peter O'Donovan at <odonovan@dgp.toronto.edu>
