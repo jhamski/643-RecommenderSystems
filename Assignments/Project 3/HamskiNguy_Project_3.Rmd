@@ -14,6 +14,8 @@ require(tidyr)
 require(knitr)
 #require(Matrix)
 require(recommenderlab)
+
+options(scipen=999)
 ```
 
 Reading in needed datasets. Artist information will be joined to user-artist dataset for readability
@@ -62,6 +64,44 @@ user.artists[is.nan(user.artists)] <- 0
 Built-in SVD
 ```{r}
 svd <- svd(user.artists)
-summary(svd)
+summary(svd$d)
 ```
 
+```{r}
+svd$d[51:length(svd$d)] <- 0
+
+#UDVT
+user.artists.svd <- svd$u %*% diag(svd$d) %*% t(svd$v)
+dim(user.artists.svd)
+```
+
+
+```{r}
+user.artists.RRM <- as(user.artists.svd,"realRatingMatrix")
+user.ratings <- user.artists.RRM[rowCounts(user.artists.RRM) > 45, colCounts(user.artists.RRM) > 50]
+
+#dim(user.ratings)
+
+#user.ratings.norm <- normalize(user.ratings)
+
+#sum(rowMeans(user.ratings.norm) > 0.00001)
+```
+
+```{r}
+training <- sample(x=c(TRUE, FALSE), size=nrow(user.ratings), replace=TRUE, prob=(c(0.8,0.2)))
+rating.train <- user.ratings[training,]
+rating.test <- user.ratings[!training,]
+```
+
+```{r}
+rec.model <- Recommender(data=rating.train, method="IBCF", parameter = list(k=5))
+```
+
+```{r}
+rec.predict <- predict(object=rec.model, newdata=rating.test, n=5)
+rec.predict@items[6]
+
+rec_1 <- rec.predict@items[[1]]
+artist.predict <- rec.predict@itemLabels[rec_1]
+artist.predict
+```
