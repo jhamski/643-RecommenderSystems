@@ -45,27 +45,70 @@ user.artists.pairwise[16060,]$name <- NA
 ```{r, cache=TRUE}
 num_listens = 1000
 
-user.artists.matrix <- user.artists.pairwise %>%
+user.artists <- user.artists.pairwise %>%
   filter(weight > num_listens) %>% #filter artists with less than num_listens listens
   spread(key = name, value = weight) %>%
   as.matrix()
 
-user.artists <- user.artists.matrix[,-1]
+user.artists <- user.artists[,-1]
 dim(user.artists)
 ```
 
 Replace NAs with zeros and scale.
 ```{r}
 user.artists[is.na(user.artists)] <- 0
-user.artists <- scale(user.artists)
+user.artists <- scale(user.artists, center = TRUE, scale = TRUE)
 user.artists[is.nan(user.artists)] <- 0
 ```
 
 Built-in SVD
 ```{r}
 svd <- svd(user.artists)
-summary(svd$d)
+summary(svd)
 ```
+
+```{r}
+dim(svd$u)
+dim(svd$v)
+```
+
+Reduce the vector d to values greater than 1 and use it to create a matrix k. 
+```{r}
+score.limit <- 1
+k <- svd$d[svd$d >= score.limit]
+k.length <- length(k)
+s <- k %>%
+  sqrt() %>%
+  diag()
+dim(s)
+```
+
+
+```{r}
+u.reduced <- svd$u[,1:k.length]
+u.s <- u.reduced %*% s
+dim(u.s)
+```
+
+```{r}
+v.reduced <- svd$v[1:k.length,]
+v.s <- s %*% v.reduced 
+dim(v.s)
+```
+
+
+
+Replace NAs with column means
+```{r}
+# http://stackoverflow.com/questions/25835643/replacing-missing-values-in-r-with-column-mean
+
+cM <- colMeans(user.artists, na.rm = TRUE)
+indx <- which(is.na(user.artists), arr.ind = TRUE)
+user.artists[indx] <- cM[indx[,2]]
+```
+
+
+
 
 ```{r}
 svd$d[51:length(svd$d)] <- 0
