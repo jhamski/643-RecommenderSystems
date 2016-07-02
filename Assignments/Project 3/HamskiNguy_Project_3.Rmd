@@ -54,6 +54,8 @@ user.artists <- user.artists[,-1]
 dim(user.artists)
 ```
 
+From this we note that n = 1416 (users) and m = 2776 (artists).
+
 Replace NAs with zeros and scale.
 ```{r}
 user.artists[is.na(user.artists)] <- 0
@@ -61,7 +63,7 @@ user.artists <- scale(user.artists, center = TRUE, scale = TRUE)
 user.artists[is.nan(user.artists)] <- 0
 ```
 
-Built-in SVD
+Built-in SVD function. 
 ```{r}
 svd <- svd(user.artists)
 summary(svd)
@@ -80,32 +82,74 @@ k.length <- length(k)
 s <- k %>%
   sqrt() %>%
   diag()
+
 dim(s)
 ```
 
 
 ```{r}
-u.reduced <- svd$u[,1:k.length]
-u.s <- u.reduced %*% s
-dim(u.s)
+#This matrix should be m x k.
+u.reduced <- svd$u[,1:k.length,]
+dim(u.reduced)
+
+#This matrix should be k x n.
+
+v.reduced <- svd$v[,1:k.length]
+dim(v.reduced)
 ```
 
 ```{r}
-v.reduced <- svd$v[1:k.length,]
-v.s <- s %*% v.reduced 
-dim(v.s)
+predicted <- v.reduced %*% s %*% u.reduced
+dim(predicted)
 ```
 
-
-
-Replace NAs with column means
 ```{r}
-# http://stackoverflow.com/questions/25835643/replacing-missing-values-in-r-with-column-mean
-
-cM <- colMeans(user.artists, na.rm = TRUE)
-indx <- which(is.na(user.artists), arr.ind = TRUE)
-user.artists[indx] <- cM[indx[,2]]
+colnames(predicted) <- rownames(user.artists)
+rownames(predicted) <- colnames(user.artists)
 ```
+
+Let's say I listen to: Jay-Z and Nas. What users am I most similar to?
+
+```{r}
+artists <- colnames(user.artists)
+n.tags <- length(artists)
+
+query.vector <- rep(0, n.tags)
+query.vector[which(artists == "Nas")] <- 1
+query.vector[which(artists == "Jay-Z")] <- 1
+```
+
+```{r}
+recommendation <- query.vector %*% predicted
+users <- rownames(user.artists)
+recommendation.table <- as.data.frame(cbind(users, recommendation[1,]))
+
+similar.users <- arrange(recommendation.table, desc(V2))
+```
+
+```{r}
+head(similar.users)
+```
+
+Now, we take a look at the artists user 871 listened to. 
+```{r}
+user.871 <- user.artists[871,]
+
+user.871 <- cbind(artists, user.871) %>% as.data.frame() %>% arrange(desc(user.871))
+head(user.871)
+```
+
+Unfortunately, we don't see rap artists, which is what we would anticipate. 
+
+However, when we check similar user ranked #6, we get DMX, T.I. and Bizzy Bone - all rappers and good recommendations for our hypothetical listener. 
+```{r}
+user.1216 <- user.artists[1216,]
+
+user.1216 <- cbind(artists, user.1216) %>% as.data.frame() %>% arrange(desc(user.1216))
+head(user.1216)
+```
+
+
 
 
 
