@@ -18,7 +18,9 @@ require(recommenderlab)
 options(scipen=999)
 ```
 
-Reading in needed datasets. Artist information will be joined to user-artist dataset for readability
+#Data Preparation
+
+First, we reading in the required datasets. Artist information is joined to user-artist dataset for readability
 ```{r Read_Dataset, cache=TRUE, warnings = FALSE}
 user.artists.pairwise <- read.delim('hetrec2011-lastfm-2k/user_artists.dat', sep="\t")
 
@@ -26,9 +28,7 @@ artists <- read.delim('hetrec2011-lastfm-2k/artists.dat', sep="\t") %>%
   select(id, name)
 ```
 
-#Data Preparation
-
-Converting from Artist IDs to Artist Names for easier interpretation.
+We convert from Artist IDs to Artist Names for easier interpretation.
 ```{r join_artist_name, cache=TRUE}
 colnames(artists) <- c("artistID", "name")
 
@@ -42,6 +42,7 @@ user.artists.pairwise[16060,]$name <- NA
 #ggplot(user.artists.pairwise, aes(x = weight)) + geom_density() + theme_bw() + scale_x_log10()
 ```
 
+Here, we filter out any artists with fewer than 1000 listens and convert from a pairwise representation to a matrix. This matrix has musicians (items) as columns and listerners (users) as rows. 
 ```{r, cache=TRUE}
 num_listens = 1000
 
@@ -54,18 +55,18 @@ user.artists <- user.artists[,-1]
 dim(user.artists)
 ```
 
-From this we note that n = 1416 (users) and m = 2776 (artists).
+From this we note that n = 1416 (users) and m = 2776 (artists). Keeping these dimensions consistent will be important when verifying the SVD step. 
 
-Replace NAs with zeros and scale.
+Here, we replace NAs with zeros. Then, we use the built in function scale to ensure centered (predictor variable mean subtracted from each observation) and scaled (each observation divided by the predictor variable's standard deviation) data. Because the dataset is so sparse, we are left with additional NAs which are set to zero. 
 ```{r}
 user.artists[is.na(user.artists)] <- 0
 user.artists <- scale(user.artists, center = TRUE, scale = TRUE)
-user.artists[is.nan(user.artists)] <- 0
+#user.artists[is.nan(user.artists)] <- 0
 ```
 
-Built-in SVD function. 
+The built SVD function takes approximately 30 seconds to run. Given this isn't very large dataset, it reflects one of the downside to SVD, the time it takes to perform the matrix factorization. 
 ```{r}
-svd <- svd(user.artists)
+system.time(svd <- svd(user.artists))
 summary(svd)
 ```
 
@@ -74,9 +75,14 @@ dim(svd$u)
 dim(svd$v)
 ```
 
-Reduce the vector d to values greater than 1 and use it to create a matrix k. 
+Our research didn't turn up a good guideline for selecting a number for k, the number of singular values resulting from the singular value decomposition. 50 was chosen since it seems like a point of signficant decrease in the singular values. 
 ```{r}
-score.limit <- 1
+plot(svd$d)
+```
+
+Reduce the vector d to values greater than 50 and use it to create a matrix k results in matrix s with dimensions 404 x 404. This is 95% smaller than the original matrix. 
+```{r}
+score.limit <- 50
 k <- svd$d[svd$d >= score.limit]
 k.length <- length(k)
 s <- k %>%
@@ -87,40 +93,48 @@ dim(s)
 ```
 
 
+Now, we take the left and right singular matrices and reduce them based on k. 
 ```{r}
 #This matrix should be m x k.
-u.reduced <- svd$u[,1:k.length,]
+u.reduced <- svd$u[,1:k.length]
 dim(u.reduced)
-
-#This matrix should be k x n.
-
-v.reduced <- svd$v[,1:k.length]
-dim(v.reduced)
 ```
 
 ```{r}
-predicted <- v.reduced %*% s %*% u.reduced
+#This matrix should be k x n.
+v.reduced <- t(svd$v)
+v.reduced <- v.reduced[1:k.length,]
+dim(v.reduced)
+```
+
+Now, we build a prediction matrix using the singular values. 
+```{r}
+predicted <- u.reduced %*% s %*% v.reduced
 dim(predicted)
 ```
 
 ```{r}
-colnames(predicted) <- rownames(user.artists)
-rownames(predicted) <- colnames(user.artists)
+colnames(predicted) <- colnames(user.artists)
+rownames(predicted) <- rownames(user.artists)
 ```
 
-Let's say I listen to: Jay-Z and Nas. What users am I most similar to?
+# Recommending Similar Users 
+Let's say I listen to: Nas, Jay-Z, DMX, and Kanye West a lot. What users am I most similar to?
 
 ```{r}
 artists <- colnames(user.artists)
 n.tags <- length(artists)
 
 query.vector <- rep(0, n.tags)
-query.vector[which(artists == "Nas")] <- 1
-query.vector[which(artists == "Jay-Z")] <- 1
+query.vector[which(artists == "Nas")] <- 10
+query.vector[which(artists == "Jay-Z")] <- 10
+query.vector[which(artists == "DMX")] <- 10
+query.vector[which(artists == "Kanye West")] <- 10
 ```
 
+Multiply the query vector by our 'predict' matrix made of singular values. 
 ```{r}
-recommendation <- query.vector %*% predicted
+recommendation <- query.vector %*% t(predicted)
 users <- rownames(user.artists)
 recommendation.table <- as.data.frame(cbind(users, recommendation[1,]))
 
@@ -131,23 +145,18 @@ similar.users <- arrange(recommendation.table, desc(V2))
 head(similar.users)
 ```
 
-Now, we take a look at the artists user 871 listened to. 
+Now, we take a look at the artists user 233 listened to. 
 ```{r}
-user.871 <- user.artists[871,]
+similar.user.1 <- user.artists[233,]
 
-user.871 <- cbind(artists, user.871) %>% as.data.frame() %>% arrange(desc(user.871))
-head(user.871)
+similar.user.1  <- cbind(artists, similar.user.1) %>% as.data.frame() %>% arrange(desc(similar.user.1 ))
+head(similar.user.1)
 ```
 
-Unfortunately, we don't see rap artists, which is what we would anticipate. 
 
-However, when we check similar user ranked #6, we get DMX, T.I. and Bizzy Bone - all rappers and good recommendations for our hypothetical listener. 
-```{r}
-user.1216 <- user.artists[1216,]
+# Recommending Items
 
-user.1216 <- cbind(artists, user.1216) %>% as.data.frame() %>% arrange(desc(user.1216))
-head(user.1216)
-```
+
 
 
 
