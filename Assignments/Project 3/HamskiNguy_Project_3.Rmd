@@ -2,7 +2,7 @@
 title: 'Recommender Systems - Project #3'
 author: "J. Hamski, V. Nguy"
 date: "June 28, 2016"
-output: html_document
+output: pdf_document
 ---
 
 
@@ -63,6 +63,8 @@ user.artists[is.na(user.artists)] <- 0
 user.artists <- scale(user.artists, center = TRUE, scale = TRUE)
 #user.artists[is.nan(user.artists)] <- 0
 ```
+
+# Preforming the SVD
 
 The built SVD function takes approximately 30 seconds to run. Given this isn't very large dataset, it reflects one of the downside to SVD, the time it takes to perform the matrix factorization. 
 ```{r}
@@ -153,10 +155,35 @@ similar.user.1  <- cbind(artists, similar.user.1) %>% as.data.frame() %>% arrang
 head(similar.user.1)
 ```
 
+```{r}
+similar.user.2 <- user.artists[1216,]
 
-# Recommending Items
+similar.user.2  <- cbind(artists, similar.user.2) %>% as.data.frame() %>% arrange(desc(similar.user.2))
+head(similar.user.2)
+```
 
+```{r}
+similar.user.3 <- user.artists[941,]
 
+similar.user.3 <- cbind(artists, similar.user.3) %>% as.data.frame() %>% arrange(desc(similar.user.3))
+head(similar.user.3)
+```
+
+```{r}
+similar.user.4 <- user.artists[545,]
+
+similar.user.4 <- cbind(artists, similar.user.4) %>% as.data.frame() %>% arrange(desc(similar.user.4))
+head(similar.user.4)
+```
+
+```{r}
+similar.user.5 <- user.artists[1353]
+
+similar.user.5 <- cbind(artists, similar.user.5) %>% as.data.frame() %>% arrange(desc(similar.user.5))
+head(similar.user.5)
+```
+
+None of these users seem to exhibit a perponderance of rap artists, indicating a problem with our SVD-based recommender system. 
 
 
 
