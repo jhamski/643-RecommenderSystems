@@ -52,6 +52,7 @@ user.artists <- user.artists.pairwise %>%
   as.matrix()
 
 user.artists <- user.artists[,-1]
+user.artists.sparse <- user.artists
 dim(user.artists)
 ```
 
@@ -187,27 +188,25 @@ None of these users seem to exhibit a perponderance of rap artists, indicating a
 
 
 
-
-
-
 ```{r}
-svd$d[51:length(svd$d)] <- 0
-
-#UDVT
-user.artists.svd <- svd$u %*% diag(svd$d) %*% t(svd$v)
-dim(user.artists.svd)
+# k_size <- 50
+# red_d <- diag(svd$d[1:k_size])
+# red_u <- svd$u[,1:k_size]
+# red_v <- svd$v[1:k_size,]
+# 
+# dim(red_u)
+# dim(red_d)
+# dim(red_v)
+# 
+# user.artists.svd <- red_u %*% red_d %*% red_v
+# dim(user.artists.svd)
 ```
 
 
 ```{r}
-user.artists.RRM <- as(user.artists.svd,"realRatingMatrix")
-user.ratings <- user.artists.RRM[rowCounts(user.artists.RRM) > 45, colCounts(user.artists.RRM) > 50]
-
+user.artists.RRM <- as(user.artists.sparse,"realRatingMatrix")
+user.ratings <- user.artists.RRM
 #dim(user.ratings)
-
-#user.ratings.norm <- normalize(user.ratings)
-
-#sum(rowMeans(user.ratings.norm) > 0.00001)
 ```
 
 ```{r}
@@ -217,12 +216,13 @@ rating.test <- user.ratings[!training,]
 ```
 
 ```{r}
-rec.model <- Recommender(data=rating.train, method="IBCF", parameter = list(k=5))
+#rec.model <- Recommender(data=rating.train, method="SVD", parameter = list(k=5))
+rec.model <- Recommender(data=rating.train, method="SVD")
 ```
 
 ```{r}
-rec.predict <- predict(object=rec.model, newdata=rating.test, n=5)
-rec.predict@items[6]
+rec.predict <- predict(object=rec.model, newdata=rating.test)
+rec.predict@items
 
 rec_1 <- rec.predict@items[[1]]
 artist.predict <- rec.predict@itemLabels[rec_1]
