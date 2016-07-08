@@ -1,0 +1,52 @@
+---
+title: 'RecSys Project #4'
+author: "J. Hamski, V. Nguy"
+date: "July 5, 2016"
+output: pdf_document
+---
+
+```{r}
+library(readr)
+library(tidyr)
+library(dplyr)
+```
+
+
+Reading in needed datasets. Artist information will be joined to user-artist dataset for readability
+```{r Read_Dataset, cache=TRUE, warnings = FALSE}
+user.artists.pairwise <- read_delim('hetrec2011-lastfm-2k/user_artists.dat', delim = "\t")
+
+artists <- read_delim('hetrec2011-lastfm-2k/artists.dat', delim = "\t") %>% select(id, name)
+```
+
+#Data Preparation
+
+Converting from Artist IDs to Artist Names for easier interpretation.
+```{r join_artist_name, cache=TRUE}
+colnames(artists) <- c("artistID", "name")
+
+#note: one duplicate artist
+#artists$name[duplicated(artists$name)==TRUE]
+user.artists.pairwise <- inner_join(user.artists.pairwise, artists, by="artistID")
+
+user.artists.pairwise <- select(user.artists.pairwise, -artistID)
+
+user.artists.pairwise$name <- strtrim(user.artists.pairwise$name, 100)
+
+user.artists.pairwise[16060,]$name <- NA
+
+ggplot(user.artists.pairwise, aes(x = weight)) + geom_density() + theme_bw() + scale_x_log10()
+```
+
+Using the TidyR library. The pairwise data was converted into a sparse matrix. Due to dataset size, we reduced to it's size by eliminating any artist with less than 1000 listens. 
+```{r spread_data, cache=TRUE}
+num_listens <- 5000
+
+user.artists.matrix <- user.artists.pairwise %>%
+  filter(weight > num_listens) %>% #filter artists with less than num_listens listens
+  spread(key = name, value = weight) %>%
+  as.matrix()
+
+user.artists <- user.artists.matrix[,-1]
+dim(user.artists)
+```
