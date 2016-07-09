@@ -9,6 +9,7 @@ output: pdf_document
 library(readr)
 library(tidyr)
 library(dplyr)
+library(ggplot2)
 ```
 
 
