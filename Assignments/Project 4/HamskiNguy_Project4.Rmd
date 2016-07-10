@@ -10,6 +10,7 @@ library(readr)
 library(tidyr)
 library(dplyr)
 library(ggplot2)
+library(knitr)
 ```
 
 
@@ -36,18 +37,49 @@ user.artists.pairwise$name <- strtrim(user.artists.pairwise$name, 100)
 
 user.artists.pairwise[16060,]$name <- NA
 
-ggplot(user.artists.pairwise, aes(x = weight)) + geom_density() + theme_bw() + scale_x_log10()
+#ggplot(user.artists.pairwise, aes(x = weight)) + geom_density() + theme_bw() + scale_x_log10()
 ```
 
+The user-artist pairwise record contains multiple rows for a single artist. In order to understand the distribution of listens for artists, we group and sum for each artist. 
+```{r}
+artist.listens <- user.artists.pairwise %>%
+  group_by(name) %>% 
+  summarise(total.listens = sum(weight))
+```
+
+
+# Exploratory Data Analysis
+
+The median number for listens is 324 - quite  a low number! The highest number of listens is Britney Spears with 2.3 million listens. We believe this dataset could be well modeled with a lognormal distribution. 
+```{r}
+summary(artist.listens$total.listens)
+ggplot(artist.listens, aes(x = total.listens)) + geom_density() + theme_bw() + scale_x_log10()
+```
+
+Looking at the top 10 artists it is important to note that Britney Spears has nearly twice as many listens as the next most popular artist, Depeche Mode. 
+```{r}
+artist.listens %>% arrange(desc(total.listens)) %>% top_n(10) %>% kable()
+```
+
+We have decided to limit our recommender system to artist who have more than 900 total listens.
+```{r}
+listens.cutoff <- 900
+artist.cutoff <- artist.listens %>% filter(total.listens >= listens.cutoff)
+```
+
+# User-Item Matrix Construction
 Using the TidyR library. The pairwise data was converted into a sparse matrix. Due to dataset size, we reduced to it's size by eliminating any artist with less than 1000 listens. 
 ```{r spread_data, cache=TRUE}
-num_listens <- 5000
-
 user.artists.matrix <- user.artists.pairwise %>%
-  filter(weight > num_listens) %>% #filter artists with less than num_listens listens
+  filter(name %in% artist.cutoff$name) %>% #filter artists with less than num_listens listens
   spread(key = name, value = weight) %>%
+  distinct() %>%
   as.matrix()
 
+rownames(user.artists.matrix) <- user.artists.matrix[,1]
 user.artists <- user.artists.matrix[,-1]
 dim(user.artists)
 ```
+
+
+
