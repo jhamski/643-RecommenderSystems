@@ -1,18 +1,31 @@
 ---
-title: 'RecSys Project #4'
-author: "J. Hamski, V. Nguy"
-date: "July 5, 2016"
-output: pdf_document
+title: "Project 4: A Music Recommendation System with Social Context"
+author: James Hamski (james.hamski@spsmail.cuny.edu), Vuthy Nguy (vuthy.nguy@spsmail.cuny.edu)
+date: "July 10, 2016"
+output:
+  pdf_document:
+    fig_caption: no
+    keep_tex: no
+    number_sections: yes
+  html_document:
+    fig_caption: no
+    force_captions: yes
+    highlight: pygments
+    number_sections: yes
+    theme: cerulean
+csl: report_formatting.csl
 ---
 
-```{r}
+```{r, warning=FALSE, message=FALSE, error=TRUE}
 library(readr)
 library(tidyr)
 library(dplyr)
 library(ggplot2)
 library(knitr)
+library(igraph)
 ```
 
+# User-Artist Data
 
 Reading in needed datasets. Artist information will be joined to user-artist dataset for readability
 ```{r Read_Dataset, cache=TRUE, warnings = FALSE}
@@ -21,7 +34,7 @@ user.artists.pairwise <- read_delim('hetrec2011-lastfm-2k/user_artists.dat', del
 artists <- read_delim('hetrec2011-lastfm-2k/artists.dat', delim = "\t") %>% select(id, name)
 ```
 
-#Data Preparation
+##Data Preparation
 
 Converting from Artist IDs to Artist Names for easier interpretation.
 ```{r join_artist_name, cache=TRUE}
@@ -48,7 +61,7 @@ artist.listens <- user.artists.pairwise %>%
 ```
 
 
-# Exploratory Data Analysis
+## Exploratory Data Analysis
 
 The median number for listens is 324 - quite  a low number! The highest number of listens is Britney Spears with 2.3 million listens. We believe this dataset could be well modeled with a lognormal distribution. 
 ```{r}
@@ -67,7 +80,7 @@ listens.cutoff <- 900
 artist.cutoff <- artist.listens %>% filter(total.listens >= listens.cutoff)
 ```
 
-# User-Item Matrix Construction
+## User-Item Matrix Construction
 Using the TidyR library the pairwise data was converted into a sparse matrix.
 ```{r spread_data, cache=TRUE}
 user.artists.matrix <- user.artists.pairwise %>%
@@ -81,9 +94,9 @@ user.artists <- user.artists.matrix[,-1]
 dim(user.artists)
 ```
 
-## NAs
+### Dealing with NAs
 
-We tried two ways of dealing with NAs - imputing with column averages, and replacing with 0s.Note that due to the sparsity of the dataset, for most artists the column mean rounds to zero.  
+We tried two ways of dealing with NAs - imputing with column averages, and replacing with 0s.Note that due to the sparsity of the dataset, for most artists the column mean rounds to zero. In addition, the dataframe with column means was centered and scaled around 0 using the scale function. This gives us two views of the same dataset- one with NAs replaced with zeros which is relatively unmodified, and another with column means replacing NAs and normalized listen counts. 
 ```{r}
 # http://stackoverflow.com/questions/25835643/replacing-missing-values-in-r-with-column-mean
 user.artists.ave <- user.artists
@@ -91,9 +104,71 @@ for(i in 1:ncol(user.artists.ave)){
   user.artists.ave[is.na(user.artists.ave[,i]), i] <- mean(user.artists.ave[,i], na.rm = TRUE)
 }
 
+user.artists.ave <- scale(user.artists.ave)
+
 user.artists[is.na(user.artists)] <- 0
 ```
 
 
+# Social Network Data
 
+```{r}
+user.friends <- read_delim('hetrec2011-lastfm-2k/user_friends.dat', delim = "\t")
+```
+
+```{r}
+user.friends$friend <- 1
+user.friends.matrix <- user.friends %>% spread(key = userID, value = friend)
+user.friends.matrix[is.na(user.friends.matrix)] <- 0
+
+rownames(user.friends.matrix) <- user.friends.matrix$friendID
+user.friends.matrix <- user.friends.matrix[,-1]
+dim(user.friends.matrix)
+```
+
+```{r}
+user.graph <- graph.adjacency(as.matrix(user.friends.matrix), mode = "undirected")
+
+#plot(user.graph)
+```
+
+## Graph Analysis
+The proportion of present edges from all possible edges in the network.
+```{r}
+edge_density(user.graph)
+
+```
+A network diameter is the longest geodesic distance (length of the shortest path between two nodes) in the network.
+```{r}
+diameter(user.graph)
+```
+
+```{r}
+# http://kateto.net/networks-r-igraph
+deg <- degree(user.graph, mode="all")
+#plot(user.graph, vertex.size=deg*3)
+hist(deg, breaks=1:vcount(user.graph)-1, main="Histogram of node degree")
+```
+
+```{r}
+deg.dist <- degree_distribution(user.graph, cumulative=T, mode="all")
+plot( x=0:max(deg), y=1-deg.dist, pch=19, cex=1.2, xlab="Degree", ylab="Cumulative Frequency")
+```
+
+```{r}
+mean_distance(user.graph, directed=F)
+```
+
+### Communities
+
+```{r}
+#cliques(user.graph) # list of cliques       
+#sapply(cliques(user.graph), length) # clique sizes
+largest_cliques(user.graph) # cliques with max number of nodes
+```
+
+```{r, eval=FALSE}
+ceb <- cluster_edge_betweenness(user.graph) 
+plot(ceb, user.graph) 
+```
 
