@@ -68,7 +68,7 @@ artist.cutoff <- artist.listens %>% filter(total.listens >= listens.cutoff)
 ```
 
 # User-Item Matrix Construction
-Using the TidyR library. The pairwise data was converted into a sparse matrix. Due to dataset size, we reduced to it's size by eliminating any artist with less than 1000 listens. 
+Using the TidyR library the pairwise data was converted into a sparse matrix.
 ```{r spread_data, cache=TRUE}
 user.artists.matrix <- user.artists.pairwise %>%
   filter(name %in% artist.cutoff$name) %>% #filter artists with less than num_listens listens
@@ -80,6 +80,20 @@ rownames(user.artists.matrix) <- user.artists.matrix[,1]
 user.artists <- user.artists.matrix[,-1]
 dim(user.artists)
 ```
+
+## NAs
+
+We tried two ways of dealing with NAs - imputing with column averages, and replacing with 0s.Note that due to the sparsity of the dataset, for most artists the column mean rounds to zero.  
+```{r}
+# http://stackoverflow.com/questions/25835643/replacing-missing-values-in-r-with-column-mean
+user.artists.ave <- user.artists
+for(i in 1:ncol(user.artists.ave)){
+  user.artists.ave[is.na(user.artists.ave[,i]), i] <- mean(user.artists.ave[,i], na.rm = TRUE)
+}
+
+user.artists[is.na(user.artists)] <- 0
+```
+
 
 
 
