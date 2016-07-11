@@ -94,6 +94,38 @@ user.artists <- user.artists.matrix[,-1]
 dim(user.artists)
 ```
 
+### Filtering out artists with less than 0.5% of the users listening to them
+```{r}
+#Number of listeners cutoff rate: 0.5%
+cutoff.rate <- 0.005
+
+#Calculate cutoff numbner
+n.users <- nrow(user.artists.matrix)
+n.user.cutoff <- round(cutoff.rate * n.users)
+
+#Empty vector to store counts
+listener.count <- vector()
+
+#For each artist, sum up number of users who listened to them
+for (n in 2:ncol(user.artists.matrix)) {
+  counts <- sum(!is.na(user.artists.matrix[,n]))
+  listener.count <- c(listener.count, counts)
+}
+
+#Create logical vector for artists with less listeners than cutoff rate
+listener.bool <- listener.count > n.user.cutoff
+
+#Remove artists that didnt meet cutoff
+mtx.cutoff <- user.artists.matrix[,listener.bool]
+
+dim(user.artists.matrix)
+dim(mtx.cutoff)
+
+#new user.artists.matrix with
+user.artists <- mtx.cutoff
+
+```
+
 ### Dealing with NAs
 
 We tried two ways of dealing with NAs - imputing with column averages, and replacing with 0s.Note that due to the sparsity of the dataset, for most artists the column mean rounds to zero. In addition, the dataframe with column means was centered and scaled around 0 using the scale function. This gives us two views of the same dataset- one with NAs replaced with zeros which is relatively unmodified, and another with column means replacing NAs and normalized listen counts. 
