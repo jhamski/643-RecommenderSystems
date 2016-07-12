@@ -170,6 +170,22 @@ sim.matrix.base.zeros <- recommenderlab::similarity(user.artists.rrm, method = "
 user.friends <- read_delim('hetrec2011-lastfm-2k/user_friends.dat', delim = "\t")
 ```
 
+Now we ensure the analysis only goes forward with users that were contained in the dataset of user / artist listens. 
+
+```{r}
+user.IDs <- unique(user.artists.pairwise$userID)
+
+length(user.IDs)
+```
+
+```{r}
+user.friends <- filter(user.friends, userID %in% user.IDs)
+
+length(unique(user.friends$userID))
+
+```
+
+
 ```{r}
 user.friends$friend <- 1
 user.friends.matrix <- user.friends %>% spread(key = userID, value = friend)
@@ -177,8 +193,13 @@ user.friends.matrix[is.na(user.friends.matrix)] <- 0
 
 rownames(user.friends.matrix) <- user.friends.matrix$friendID
 user.friends.matrix <- user.friends.matrix[,-1]
+user.friends.matrix <- user.friends.matrix[-1,]
 dim(user.friends.matrix)
 ```
+
+
+
+
 
 ```{r}
 user.graph <- graph.adjacency(as.matrix(user.friends.matrix), mode = "undirected")
