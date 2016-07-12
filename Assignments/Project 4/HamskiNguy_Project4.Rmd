@@ -16,17 +16,25 @@ output:
 csl: report_formatting.csl
 ---
 
-```{r, warning=FALSE, message=FALSE, error=TRUE}
+# Introduction
+In this project we use the method outlined in the paper [Social Network Collaborative Filtering](http://papers.ssrn.com/sol3/papers.cfm?abstract_id=1303924) (R. Zheng, D. Wilkinson, and F. Provost, 2008) to add context to a content-based recommender system. 
+
+
+
+*Citation: Zheng, Rong and Wilkinson, Dennis and Provost, Foster, Social Network Collaborative Filtering (October 2008). Stern, IOMS Department, CeDER, Vol. , pp. -, 2008. Available at SSRN: http://ssrn.com/abstract=1303924*
+```{r, echo = FALSE, warning=FALSE, message=FALSE, error=TRUE}
 library(readr)
 library(tidyr)
 library(dplyr)
 library(ggplot2)
 library(knitr)
 library(igraph)
+library(recommenderlab)
 ```
 
-# User-Artist Data
+# User-Based Recommendation System (without Social Context)
 
+## Data Preparation
 Reading in needed datasets. Artist information will be joined to user-artist dataset for readability
 ```{r Read_Dataset, cache=TRUE, warnings = FALSE}
 user.artists.pairwise <- read_delim('hetrec2011-lastfm-2k/user_artists.dat', delim = "\t")
@@ -34,7 +42,6 @@ user.artists.pairwise <- read_delim('hetrec2011-lastfm-2k/user_artists.dat', del
 artists <- read_delim('hetrec2011-lastfm-2k/artists.dat', delim = "\t") %>% select(id, name)
 ```
 
-##Data Preparation
 
 Converting from Artist IDs to Artist Names for easier interpretation.
 ```{r join_artist_name, cache=TRUE}
@@ -139,7 +146,22 @@ for(i in 1:ncol(user.artists.ave)){
 user.artists.ave <- scale(user.artists.ave)
 
 user.artists[is.na(user.artists)] <- 0
+
+user.artists.rrm <- new("realRatingMatrix", data = as(user.artists, "Matrix"))
+user.artists.ave.rrm <- new("realRatingMatrix", data = as(user.artists.ave, "Matrix"))
 ```
+
+## Constructing a User-based Recommender System
+
+First, we construct a user-based similarity matrix using the recommenderlab package. This will allow us to have a "sans-context" recommendation system to compare results when we use our recommendation system. We do this for both the averaged NAs and zerod NAs user-artist matrices.  
+```{r, cache=TRUE}
+# note igraph also has a function 'similarity' so the package must be specified. 
+
+sim.matrix.base.ave <- recommenderlab::similarity(user.artists.ave.rrm, method = "cosine", which = "users")
+
+sim.matrix.base.zeros <- recommenderlab::similarity(user.artists.rrm, method = "cosine", which = "users")
+```
+
 
 
 # Social Network Data
@@ -199,8 +221,43 @@ mean_distance(user.graph, directed=F)
 largest_cliques(user.graph) # cliques with max number of nodes
 ```
 
+```{r, eval = FALSE}
+cfg <- cluster_fast_greedy(as.undirected(user.graph))
+plot(cfg, as.undirected(user.graph))
+```
+
+
 ```{r, eval=FALSE}
 ceb <- cluster_edge_betweenness(user.graph) 
 plot(ceb, user.graph) 
 ```
+
+
+## Shortest Paths using Dijkstra’s algorithm
+
+Computing the distance matrix:  
+```{r}
+D <- shortest.paths(user.graph, algorithm = "dijkstra")
+D[D == Inf] <- NA
+```
+
+The paper assumes that social influence will decay exponentially as the social-network distance increases. Therefore, the distance matrix is transformed to the influence matrix $I = (ist) s, t =1, 2, …, M$ via:
+$i_st = exp(-d_st)$.   
+
+Computing the influence matrix: 
+```{r}
+I <- exp(D * (-1))
+dim(I)
+```
+
+## Adding Context via the Influence Matrix
+
+```{r}
+sim.matrix.base.zeros.m <- as.matrix(sim.matrix.base.zeros)
+dim(sim.matrix.base.zeros.m)
+```
+```{r}
+sim.matrix.zeros.I <- I %*% sim.matrix.base.zeros.m 
+```
+
 
