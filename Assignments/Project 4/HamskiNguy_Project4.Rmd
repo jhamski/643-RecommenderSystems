@@ -101,7 +101,10 @@ user.artists <- user.artists.matrix[,-1]
 dim(user.artists)
 ```
 
-### Filtering out artists with less than 0.5% of the users listening to them
+## Filtering out artists with less than 0.5% of the users listening to them
+
+Filter out artists which were listened to by small percent of the users in the dataset trimming the long distribution of extremely obscure artists.
+
 ```{r}
 #Number of listeners cutoff rate: 0.5%
 cutoff.rate <- 0.005
@@ -133,7 +136,7 @@ user.artists <- mtx.cutoff
 
 ```
 
-### Dealing with NAs
+## Dealing with NAs
 
 We tried two ways of dealing with NAs - imputing with column averages, and replacing with 0s.Note that due to the sparsity of the dataset, for most artists the column mean rounds to zero. In addition, the dataframe with column means was centered and scaled around 0 using the scale function. This gives us two views of the same dataset- one with NAs replaced with zeros which is relatively unmodified, and another with column means replacing NAs and normalized listen counts. 
 ```{r}
@@ -163,8 +166,11 @@ sim.matrix.base.zeros <- recommenderlab::similarity(user.artists.rrm, method = "
 ```
 
 
+# User-Based Recommendation System (with Social Context)
 
-# Social Network Data
+## Social Network Data
+
+This file contains the friends relationship between users.
 
 ```{r}
 user.friends <- read_delim('hetrec2011-lastfm-2k/user_friends.dat', delim = "\t")
@@ -177,6 +183,8 @@ user.IDs <- unique(user.artists.pairwise$userID)
 
 length(user.IDs)
 ```
+
+
 
 ```{r}
 user.friends <- filter(user.friends, userID %in% user.IDs)
