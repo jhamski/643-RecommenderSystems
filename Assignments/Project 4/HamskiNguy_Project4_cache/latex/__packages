@@ -4,3 +4,9 @@ tidyr
 dplyr
 ggplot2
 knitr
+igraph
+Matrix
+arules
+proxy
+registry
+recommenderlab

@@ -85,15 +85,18 @@ We have decided to limit our recommender system to artist who have more than 900
 ```{r}
 listens.cutoff <- 900
 artist.cutoff <- artist.listens %>% filter(total.listens >= listens.cutoff)
+
+user.ids <- unique(user.artists.pairwise$userID)
 ```
 
 ## User-Item Matrix Construction
 Using the TidyR library the pairwise data was converted into a sparse matrix.
 ```{r spread_data, cache=TRUE}
 user.artists.matrix <- user.artists.pairwise %>%
-  filter(name %in% artist.cutoff$name) %>% #filter artists with less than num_listens listens
+  filter(userID %in% listener.ids) %>%
   spread(key = name, value = weight) %>%
   distinct() %>%
+  select(one_of(artist.cutoff$name)) %>%
   as.matrix()
 
 rownames(user.artists.matrix) <- user.artists.matrix[,1]
@@ -244,12 +247,6 @@ mean_distance(user.graph, directed=F)
 
 ### Communities
 
-```{r}
-#cliques(user.graph) # list of cliques       
-#sapply(cliques(user.graph), length) # clique sizes
-largest_cliques(user.graph) # cliques with max number of nodes
-```
-
 ```{r, eval = FALSE}
 cfg <- cluster_fast_greedy(as.undirected(user.graph))
 plot(cfg, as.undirected(user.graph))
@@ -285,6 +282,7 @@ dim(I)
 sim.matrix.base.zeros.m <- as.matrix(sim.matrix.base.zeros)
 dim(sim.matrix.base.zeros.m)
 ```
+
 ```{r}
 sim.matrix.zeros.I <- I %*% sim.matrix.base.zeros.m 
 ```
