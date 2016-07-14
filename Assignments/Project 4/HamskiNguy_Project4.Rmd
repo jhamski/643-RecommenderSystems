@@ -286,10 +286,19 @@ dim(sim.matrix.base.zeros.m)
 
 ```{r}
 start.time <- Sys.time()
-sim.matrix.zeros.I <- I %*% sim.matrix.base.zeros.m 
+sim.matrix.zeros.I <- I * sim.matrix.base.zeros.m 
 end.time <- Sys.time()
 time.taken <- end.time - start.time
 time.taken
 ```
 
+```{r}
+sim.matrix.base.ave.m  <- as.matrix(sim.matrix.base.ave)
+
+start.time <- Sys.time()
+sim.matrix.ave.I <- I * sim.matrix.base.ave.m 
+end.time <- Sys.time()
+time.taken <- end.time - start.time
+time.taken
+```
 
