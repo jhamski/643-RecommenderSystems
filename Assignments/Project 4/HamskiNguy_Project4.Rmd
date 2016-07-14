@@ -83,7 +83,7 @@ artist.listens %>% arrange(desc(total.listens)) %>% top_n(10) %>% kable()
 
 We have decided to limit our recommender system to artist who have more than 900 total listens.
 ```{r}
-listens.cutoff <- 900
+listens.cutoff <- 1900
 artist.cutoff <- artist.listens %>% filter(total.listens >= listens.cutoff)
 
 user.ids <- unique(user.artists.pairwise$userID)
@@ -93,14 +93,23 @@ user.ids <- unique(user.artists.pairwise$userID)
 Using the TidyR library the pairwise data was converted into a sparse matrix.
 ```{r spread_data, cache=TRUE}
 user.artists.matrix <- user.artists.pairwise %>%
-  filter(userID %in% listener.ids) %>%
   spread(key = name, value = weight) %>%
   distinct() %>%
   select(one_of(artist.cutoff$name)) %>%
   as.matrix()
 
-rownames(user.artists.matrix) <- user.artists.matrix[,1]
-user.artists <- user.artists.matrix[,-1]
+rownames(user.artists.matrix) <- user.ids
+
+# http://stackoverflow.com/questions/17200114/how-to-split-data-into-training-testing-sets-using-sample-function-in-r-program
+smp_size <- floor(0.75 * nrow(user.artists.matrix))
+
+set.seed(123)
+train_ind <- sample(seq_len(nrow(user.artists.matrix)), size = smp_size)
+
+user.artists <- user.artists.matrix[train_ind, ]
+user.artists.test <- user.artists.matrix[-train_ind, ]
+#reduce number of users to make calcs faster
+
 dim(user.artists)
 ```
 
@@ -108,7 +117,7 @@ dim(user.artists)
 
 Filter out artists which were listened to by small percent of the users in the dataset trimming the long distribution of extremely obscure artists.
 
-```{r}
+```{r, eval = FALSE}
 #Number of listeners cutoff rate: 0.5%
 cutoff.rate <- 0.005
 
@@ -182,7 +191,7 @@ user.friends <- read_delim('hetrec2011-lastfm-2k/user_friends.dat', delim = "\t"
 Now we ensure the analysis only goes forward with users that were contained in the dataset of user / artist listens. 
 
 ```{r}
-user.IDs <- unique(user.artists.pairwise$userID)
+user.IDs <- rownames(user.artists)
 
 length(user.IDs)
 ```
@@ -284,7 +293,11 @@ dim(sim.matrix.base.zeros.m)
 ```
 
 ```{r}
+start.time <- Sys.time()
 sim.matrix.zeros.I <- I %*% sim.matrix.base.zeros.m 
+end.time <- Sys.time()
+time.taken <- end.time - start.time
+time.taken
 ```
 
 
