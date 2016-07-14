@@ -153,9 +153,9 @@ which.train <- sample(x = c(TRUE, FALSE), size = nrow(user.artists), replace = T
 user.artists.train <- user.artists[which.train, ]
 user.artist.test <- user.artists[!which.train, ]
 
-user.artists <- user.artists.train
+#user.artists <- user.artists.train
 
-dim(user.artists)
+dim(user.artists.train)
 dim(user.artist.test)
 ```
 
@@ -166,44 +166,41 @@ dim(user.artist.test)
 We tried two ways of dealing with NAs - imputing with column averages, and replacing with 0s.Note that due to the sparsity of the dataset, for most artists the column mean rounds to zero. In addition, the dataframe with column means was centered and scaled around 0 using the scale function. This gives us two views of the same dataset- one with NAs replaced with zeros which is relatively unmodified, and another with column means replacing NAs and normalized listen counts. 
 ```{r}
 # http://stackoverflow.com/questions/25835643/replacing-missing-values-in-r-with-column-mean
-user.artists.ave <- user.artists
+user.artists.ave <- user.artists.train
 for(i in 1:ncol(user.artists.ave)){
   user.artists.ave[is.na(user.artists.ave[,i]), i] <- mean(user.artists.ave[,i], na.rm = TRUE)
 }
 
 user.artists.ave <- scale(user.artists.ave)
 
-user.artists[is.na(user.artists)] <- 0
-```
+user.artists.zero <- user.artists.train
+user.artists.zero[is.na(user.artists.zero)] <- 0
 
-## Removing a test sample set 
-
-```{r}
-set.seed(5648)
-
-which.train <- sample(x = c(TRUE, FALSE), size = nrow(user.artists), replace = TRUE, prob = c(0.75, 0.25))
-
-user.artists.train <- user.artists[which.train, ]
-user.artist.test <- user.artists[!which.train, ]
-
-user.artists <- user.artists.train
-
-dim(user.artists)
-dim(user.artist.test)
 ```
 
 ```{r}
-user.artists.train.ave <- user.artists.ave[which.train, ]
-user.artist.test.ave <- user.artists.ave[!which.train, ]
+# http://stackoverflow.com/questions/25835643/replacing-missing-values-in-r-with-column-mean
+user.artist.test.ave <- user.artist.test
+for(i in 1:ncol(user.artist.test.ave)){
+  user.artist.test.ave[is.na(user.artist.test.ave[,i]), i] <- mean(user.artist.test.ave[,i], na.rm = TRUE)
+}
+
+user.artist.test.ave <- scale(user.artist.test.ave)
+
+user.artist.test.zero <- user.artist.test
+user.artist.test.zero[is.na(user.artist.test.zero)] <- 0
+
+dim(user.artist.test.zero)
+dim(user.artist.test.ave)
 ```
 
 
 Create the realRatingMatrix object to use with the recommenderlab package. 
 ```{r}
-user.artists.rrm <- new("realRatingMatrix", data = as(user.artists, "Matrix"))
+user.artists.rrm <- new("realRatingMatrix", data = as(user.artists.zero, "Matrix"))
 user.artists.ave.rrm <- new("realRatingMatrix", data = as(user.artists.ave, "Matrix"))
 
-user.artists.rrm.test <- new("realRatingMatrix", data = as(user.artist.test, "Matrix"))
+user.artists.rrm.test <- new("realRatingMatrix", data = as(user.artist.test.zero, "Matrix"))
 user.artists.ave.rrm.test <- new("realRatingMatrix", data = as(user.artist.test.ave, "Matrix"))
 
 
@@ -313,13 +310,13 @@ dim(I)
 Now we ensure the analysis only goes forward with users that were contained in the *train* dataset of user / artist listens. 
 
 ```{r}
-user.IDs <- unique(rownames(user.artists))
+user.IDs <- unique(rownames(user.artists.train))
 
 length(user.IDs)
 ```
 
 ```{r}
-keep <- which(all.users %in% user.IDs)
+keep <- all.users %in% user.IDs
 length(keep)
 ```
 
