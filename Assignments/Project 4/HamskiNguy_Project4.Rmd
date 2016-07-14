@@ -171,9 +171,39 @@ for(i in 1:ncol(user.artists.ave)){
 user.artists.ave <- scale(user.artists.ave)
 
 user.artists[is.na(user.artists)] <- 0
+```
 
+## Removing a test sample set 
+
+```{r}
+set.seed(5648)
+
+which.train <- sample(x = c(TRUE, FALSE), size = nrow(user.artists), replace = TRUE, prob = c(0.75, 0.25))
+
+user.artists.train <- user.artists[which.train, ]
+user.artist.test <- user.artists[!which.train, ]
+
+user.artists <- user.artists.train
+
+dim(user.artists)
+dim(user.artist.test)
+```
+
+```{r}
+user.artists.train.ave <- user.artists.ave[which.train, ]
+user.artist.test.ave <- user.artists.ave[!which.train, ]
+```
+
+
+Create the realRatingMatrix object to use with the recommenderlab package. 
+```{r}
 user.artists.rrm <- new("realRatingMatrix", data = as(user.artists, "Matrix"))
 user.artists.ave.rrm <- new("realRatingMatrix", data = as(user.artists.ave, "Matrix"))
+
+user.artists.rrm.test <- new("realRatingMatrix", data = as(user.artist.test, "Matrix"))
+user.artists.ave.rrm.test <- new("realRatingMatrix", data = as(user.artist.test.ave, "Matrix"))
+
+
 ```
 
 
@@ -325,7 +355,33 @@ time.taken
 
 # Applying the Recommender Model
 
+## Base models
 ```{r}
+n.recommend <- 6
 
+sim.matrix.base.zeros.model <- Recommender(data = user.artists.rrm, method = "UBCF")
+
+model.1a <- recommenderlab::predict(object = sim.matrix.base.zeros.model, newdata = user.artists.rrm.test, n = n.recommend)
+```
+
+```{r}
+sim.matrix.base.ave.model <- Recommender(data = user.artists.ave.rrm, method = "UBCF")
+
+model.1b <- recommenderlab::predict(object = sim.matrix.base.ave.model,  newdata = user.artists.ave.rrm.test, n = n.recommend)
+```
+
+```{r}
+model.1a_accuracy <- calcPredictionAccuracy(model.1a, user.artists.rrm.test, goodRating = 500, byUser = TRUE, given = nrow(user.artists.rrm.test))
+
+qplot(model.1a_accuracy[, "FPR"]) + geom_histogram()
+```
+
+
+
+## Social Models
+
+
+```{r}
+a <- as(sim.matrix.zeros.I, "Recommender")
 ```
 
