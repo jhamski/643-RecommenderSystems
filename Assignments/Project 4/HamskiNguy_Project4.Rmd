@@ -109,7 +109,7 @@ dim(user.artists)
 
 Filter out artists which were listened to by small percent of the users in the dataset trimming the long distribution of extremely obscure artists.
 
-```{r}
+```{r, eval = FALSE}
 #Number of listeners cutoff rate: 0.5%
 cutoff.rate <- 0.005
 
@@ -140,6 +140,24 @@ user.artists <- mtx.cutoff
 
 ```
 
+## Removing a test sample set 
+
+```{r}
+set.seed(5648)
+
+which.train <- sample(x = c(TRUE, FALSE), size = nrow(user.artists), replace = TRUE, prob = c(0.75, 0.25))
+
+user.artists.train <- user.artists[which.train, ]
+user.artist.test <- user.artists[!which.train, ]
+
+user.artists <- user.artists.train
+
+dim(user.artists)
+dim(user.artist.test)
+```
+
+
+
 ## Dealing with NAs
 
 We tried two ways of dealing with NAs - imputing with column averages, and replacing with 0s.Note that due to the sparsity of the dataset, for most artists the column mean rounds to zero. In addition, the dataframe with column means was centered and scaled around 0 using the scale function. This gives us two views of the same dataset- one with NAs replaced with zeros which is relatively unmodified, and another with column means replacing NAs and normalized listen counts. 
@@ -157,6 +175,7 @@ user.artists[is.na(user.artists)] <- 0
 user.artists.rrm <- new("realRatingMatrix", data = as(user.artists, "Matrix"))
 user.artists.ave.rrm <- new("realRatingMatrix", data = as(user.artists.ave, "Matrix"))
 ```
+
 
 ## Constructing a User-based Recommender System
 
@@ -180,38 +199,24 @@ This file contains the friends relationship between users.
 user.friends <- read_delim('hetrec2011-lastfm-2k/user_friends.dat', delim = "\t")
 ```
 
-Now we ensure the analysis only goes forward with users that were contained in the dataset of user / artist listens. 
-
-```{r}
-user.IDs <- unique(user.artists.pairwise$userID)
-
-length(user.IDs)
-```
-
-
-
-```{r}
-user.friends <- filter(user.friends, userID %in% user.IDs)
-
-length(unique(user.friends$userID))
-
-```
-
 
 ```{r}
 user.friends$friend <- 1
 user.friends.matrix <- user.friends %>% spread(key = userID, value = friend)
 user.friends.matrix[is.na(user.friends.matrix)] <- 0
-
-rownames(user.friends.matrix) <- user.friends.matrix$friendID
-user.friends.matrix <- user.friends.matrix[,-1]
-user.friends.matrix <- user.friends.matrix[-1,]
-dim(user.friends.matrix)
 ```
 
+```{r}
+all.users <- user.friends.matrix$friendID
 
+rownames(user.friends.matrix) <- all.users
+colnames(user.friends.matrix) <- c("friendID", all.users)
+```
 
-
+```{r}
+user.friends.matrix <- user.friends.matrix[,-1]
+dim(user.friends.matrix)
+```
 
 ```{r}
 user.graph <- graph.adjacency(as.matrix(user.friends.matrix), mode = "undirected")
@@ -246,26 +251,15 @@ plot( x=0:max(deg), y=1-deg.dist, pch=19, cex=1.2, xlab="Degree", ylab="Cumulati
 mean_distance(user.graph, directed=F)
 ```
 
-### Communities
-
-```{r, eval = FALSE}
-cfg <- cluster_fast_greedy(as.undirected(user.graph))
-plot(cfg, as.undirected(user.graph))
-```
-
-
-```{r, eval=FALSE}
-ceb <- cluster_edge_betweenness(user.graph) 
-plot(ceb, user.graph) 
-```
-
-
 ## Shortest Paths using Dijkstra’s algorithm
 
 Computing the distance matrix:  
 ```{r}
 D <- shortest.paths(user.graph, algorithm = "dijkstra")
 D[D == Inf] <- NA
+
+rownames(D) <- all.users
+colnames(D) <- all.users
 ```
 
 The paper assumes that social influence will decay exponentially as the social-network distance increases. Therefore, the distance matrix is transformed to the influence matrix $I = (ist) s, t =1, 2, …, M$ via:
@@ -274,8 +268,35 @@ $i_st = exp(-d_st)$.
 Computing the influence matrix: 
 ```{r}
 I <- exp(D * (-1))
+
+rownames(I) <- all.users
+colnames(I) <- all.users
+
 dim(I)
 ```
+
+## Reducing Influence Matrix to only Training Set of Users
+
+Now we ensure the analysis only goes forward with users that were contained in the *train* dataset of user / artist listens. 
+
+```{r}
+user.IDs <- unique(rownames(user.artists))
+
+length(user.IDs)
+```
+
+```{r}
+keep <- which(all.users %in% user.IDs)
+length(keep)
+```
+
+Find I for only the training set. 
+```{r}
+I <- I[,keep]
+I <- I[keep,]
+dim(I)
+```
+
 
 ## Adding Context via the Influence Matrix
 
@@ -300,5 +321,11 @@ sim.matrix.ave.I <- I * sim.matrix.base.ave.m
 end.time <- Sys.time()
 time.taken <- end.time - start.time
 time.taken
+```
+
+# Applying the Recommender Model
+
+```{r}
+
 ```
 
