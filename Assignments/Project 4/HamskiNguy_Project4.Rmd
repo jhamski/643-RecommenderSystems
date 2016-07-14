@@ -112,7 +112,7 @@ dim(user.artists)
 
 Filter out artists which were listened to by small percent of the users in the dataset trimming the long distribution of extremely obscure artists.
 
-```{r, eval = FALSE}
+```{r}
 #Number of listeners cutoff rate: 0.5%
 cutoff.rate <- 0.005
 
