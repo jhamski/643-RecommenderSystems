@@ -100,15 +100,7 @@ user.artists.matrix <- user.artists.pairwise %>%
 
 rownames(user.artists.matrix) <- user.ids
 
-# http://stackoverflow.com/questions/17200114/how-to-split-data-into-training-testing-sets-using-sample-function-in-r-program
-smp_size <- floor(0.75 * nrow(user.artists.matrix))
-
-set.seed(123)
-train_ind <- sample(seq_len(nrow(user.artists.matrix)), size = smp_size)
-
-user.artists <- user.artists.matrix[train_ind, ]
-user.artists.test <- user.artists.matrix[-train_ind, ]
-#reduce number of users to make calcs faster
+user.artists <- user.artists.matrix
 
 dim(user.artists)
 ```
@@ -117,7 +109,7 @@ dim(user.artists)
 
 Filter out artists which were listened to by small percent of the users in the dataset trimming the long distribution of extremely obscure artists.
 
-```{r, eval = FALSE}
+```{r}
 #Number of listeners cutoff rate: 0.5%
 cutoff.rate <- 0.005
 
@@ -191,7 +183,7 @@ user.friends <- read_delim('hetrec2011-lastfm-2k/user_friends.dat', delim = "\t"
 Now we ensure the analysis only goes forward with users that were contained in the dataset of user / artist listens. 
 
 ```{r}
-user.IDs <- rownames(user.artists)
+user.IDs <- unique(user.artists.pairwise$userID)
 
 length(user.IDs)
 ```
