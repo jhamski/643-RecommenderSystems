@@ -1,0 +1,387 @@
+---
+title: "Project 4: A Music Recommendation System with Social Context"
+author: James Hamski (james.hamski@spsmail.cuny.edu), Vuthy Nguy (vuthy.nguy@spsmail.cuny.edu)
+date: "July 10, 2016"
+output:
+  pdf_document:
+    fig_caption: no
+    keep_tex: no
+    number_sections: yes
+  html_document:
+    fig_caption: no
+    force_captions: yes
+    highlight: pygments
+    number_sections: yes
+    theme: cerulean
+csl: report_formatting.csl
+---
+
+# Introduction
+In this project we use the method outlined in the paper [Social Network Collaborative Filtering](http://papers.ssrn.com/sol3/papers.cfm?abstract_id=1303924) (R. Zheng, D. Wilkinson, and F. Provost, 2008) to add context to a content-based recommender system. 
+
+
+
+*Citation: Zheng, Rong and Wilkinson, Dennis and Provost, Foster, Social Network Collaborative Filtering (October 2008). Stern, IOMS Department, CeDER, Vol. , pp. -, 2008. Available at SSRN: http://ssrn.com/abstract=1303924*
+```{r, echo = FALSE, warning=FALSE, message=FALSE, error=TRUE}
+library(readr)
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(knitr)
+library(igraph)
+library(recommenderlab)
+```
+
+# User-Based Recommendation System (without Social Context)
+
+## Data Preparation
+Reading in needed datasets. Artist information will be joined to user-artist dataset for readability
+```{r Read_Dataset, cache=TRUE, warnings = FALSE}
+user.artists.pairwise <- read_delim('hetrec2011-lastfm-2k/user_artists.dat', delim = "\t")
+
+artists <- read_delim('hetrec2011-lastfm-2k/artists.dat', delim = "\t") %>% select(id, name)
+```
+
+
+Converting from Artist IDs to Artist Names for easier interpretation.
+```{r join_artist_name, cache=TRUE}
+colnames(artists) <- c("artistID", "name")
+
+#note: one duplicate artist
+#artists$name[duplicated(artists$name)==TRUE]
+user.artists.pairwise <- inner_join(user.artists.pairwise, artists, by="artistID")
+
+user.artists.pairwise <- select(user.artists.pairwise, -artistID)
+
+user.artists.pairwise$name <- strtrim(user.artists.pairwise$name, 100)
+
+user.artists.pairwise[16060,]$name <- NA
+
+#ggplot(user.artists.pairwise, aes(x = weight)) + geom_density() + theme_bw() + scale_x_log10()
+```
+
+The user-artist pairwise record contains multiple rows for a single artist. In order to understand the distribution of listens for artists, we group and sum for each artist. 
+```{r}
+artist.listens <- user.artists.pairwise %>%
+  group_by(name) %>% 
+  summarise(total.listens = sum(weight))
+```
+
+
+## Exploratory Data Analysis
+
+The median number for listens is 324 - quite  a low number! The highest number of listens is Britney Spears with 2.3 million listens. We believe this dataset could be well modeled with a lognormal distribution. 
+```{r}
+summary(artist.listens$total.listens)
+ggplot(artist.listens, aes(x = total.listens)) + geom_density() + theme_bw() + scale_x_log10()
+```
+
+Looking at the top 10 artists it is important to note that Britney Spears has nearly twice as many listens as the next most popular artist, Depeche Mode. 
+```{r}
+artist.listens %>% arrange(desc(total.listens)) %>% top_n(10) %>% kable()
+```
+
+We have decided to limit our recommender system to artist who have more than 900 total listens.
+```{r}
+listens.cutoff <- 1900
+artist.cutoff <- artist.listens %>% filter(total.listens >= listens.cutoff)
+
+user.ids <- unique(user.artists.pairwise$userID)
+```
+
+## User-Item Matrix Construction
+Using the TidyR library the pairwise data was converted into a sparse matrix.
+```{r spread_data, cache=TRUE}
+user.artists.matrix <- user.artists.pairwise %>%
+  spread(key = name, value = weight) %>%
+  distinct() %>%
+  select(one_of(artist.cutoff$name)) %>%
+  as.matrix()
+
+rownames(user.artists.matrix) <- user.ids
+
+user.artists <- user.artists.matrix
+
+dim(user.artists)
+```
+
+## Filtering out artists with less than 0.5% of the users listening to them
+
+Filter out artists which were listened to by small percent of the users in the dataset trimming the long distribution of extremely obscure artists.
+
+```{r, eval = FALSE}
+#Number of listeners cutoff rate: 0.5%
+cutoff.rate <- 0.005
+
+#Calculate cutoff numbner
+n.users <- nrow(user.artists.matrix)
+n.user.cutoff <- round(cutoff.rate * n.users)
+
+#Empty vector to store counts
+listener.count <- vector()
+
+#For each artist, sum up number of users who listened to them
+for (n in 2:ncol(user.artists.matrix)) {
+  counts <- sum(!is.na(user.artists.matrix[,n]))
+  listener.count <- c(listener.count, counts)
+}
+
+#Create logical vector for artists with less listeners than cutoff rate
+listener.bool <- listener.count > n.user.cutoff
+
+#Remove artists that didnt meet cutoff
+mtx.cutoff <- user.artists.matrix[,listener.bool]
+
+dim(user.artists.matrix)
+dim(mtx.cutoff)
+
+#new user.artists.matrix with
+user.artists <- mtx.cutoff
+
+```
+
+## Removing a test sample set 
+
+```{r}
+set.seed(5648)
+
+which.train <- sample(x = c(TRUE, FALSE), size = nrow(user.artists), replace = TRUE, prob = c(0.75, 0.25))
+
+user.artists.train <- user.artists[which.train, ]
+user.artist.test <- user.artists[!which.train, ]
+
+user.artists <- user.artists.train
+
+dim(user.artists)
+dim(user.artist.test)
+```
+
+
+
+## Dealing with NAs
+
+We tried two ways of dealing with NAs - imputing with column averages, and replacing with 0s.Note that due to the sparsity of the dataset, for most artists the column mean rounds to zero. In addition, the dataframe with column means was centered and scaled around 0 using the scale function. This gives us two views of the same dataset- one with NAs replaced with zeros which is relatively unmodified, and another with column means replacing NAs and normalized listen counts. 
+```{r}
+# http://stackoverflow.com/questions/25835643/replacing-missing-values-in-r-with-column-mean
+user.artists.ave <- user.artists
+for(i in 1:ncol(user.artists.ave)){
+  user.artists.ave[is.na(user.artists.ave[,i]), i] <- mean(user.artists.ave[,i], na.rm = TRUE)
+}
+
+user.artists.ave <- scale(user.artists.ave)
+
+user.artists[is.na(user.artists)] <- 0
+```
+
+## Removing a test sample set 
+
+```{r}
+set.seed(5648)
+
+which.train <- sample(x = c(TRUE, FALSE), size = nrow(user.artists), replace = TRUE, prob = c(0.75, 0.25))
+
+user.artists.train <- user.artists[which.train, ]
+user.artist.test <- user.artists[!which.train, ]
+
+user.artists <- user.artists.train
+
+dim(user.artists)
+dim(user.artist.test)
+```
+
+```{r}
+user.artists.train.ave <- user.artists.ave[which.train, ]
+user.artist.test.ave <- user.artists.ave[!which.train, ]
+```
+
+
+Create the realRatingMatrix object to use with the recommenderlab package. 
+```{r}
+user.artists.rrm <- new("realRatingMatrix", data = as(user.artists, "Matrix"))
+user.artists.ave.rrm <- new("realRatingMatrix", data = as(user.artists.ave, "Matrix"))
+
+user.artists.rrm.test <- new("realRatingMatrix", data = as(user.artist.test, "Matrix"))
+user.artists.ave.rrm.test <- new("realRatingMatrix", data = as(user.artist.test.ave, "Matrix"))
+
+
+```
+
+
+## Constructing a User-based Recommender System
+
+First, we construct a user-based similarity matrix using the recommenderlab package. This will allow us to have a "sans-context" recommendation system to compare results when we use our recommendation system. We do this for both the averaged NAs and zerod NAs user-artist matrices.  
+```{r, cache=TRUE}
+# note igraph also has a function 'similarity' so the package must be specified. 
+
+sim.matrix.base.ave <- recommenderlab::similarity(user.artists.ave.rrm, method = "cosine", which = "users")
+
+sim.matrix.base.zeros <- recommenderlab::similarity(user.artists.rrm, method = "cosine", which = "users")
+```
+
+
+# User-Based Recommendation System (with Social Context)
+
+## Social Network Data
+
+This file contains the friends relationship between users.
+
+```{r}
+user.friends <- read_delim('hetrec2011-lastfm-2k/user_friends.dat', delim = "\t")
+```
+
+
+```{r}
+user.friends$friend <- 1
+user.friends.matrix <- user.friends %>% spread(key = userID, value = friend)
+user.friends.matrix[is.na(user.friends.matrix)] <- 0
+```
+
+```{r}
+all.users <- user.friends.matrix$friendID
+
+rownames(user.friends.matrix) <- all.users
+colnames(user.friends.matrix) <- c("friendID", all.users)
+```
+
+```{r}
+user.friends.matrix <- user.friends.matrix[,-1]
+dim(user.friends.matrix)
+```
+
+```{r}
+user.graph <- graph.adjacency(as.matrix(user.friends.matrix), mode = "undirected")
+
+#plot(user.graph)
+```
+
+## Graph Analysis
+The proportion of present edges from all possible edges in the network.
+```{r}
+edge_density(user.graph)
+
+```
+A network diameter is the longest geodesic distance (length of the shortest path between two nodes) in the network.
+```{r}
+diameter(user.graph)
+```
+
+```{r}
+# http://kateto.net/networks-r-igraph
+deg <- degree(user.graph, mode="all")
+#plot(user.graph, vertex.size=deg*3)
+hist(deg, breaks=1:vcount(user.graph)-1, main="Histogram of node degree")
+```
+
+```{r}
+deg.dist <- degree_distribution(user.graph, cumulative=T, mode="all")
+plot( x=0:max(deg), y=1-deg.dist, pch=19, cex=1.2, xlab="Degree", ylab="Cumulative Frequency")
+```
+
+```{r}
+mean_distance(user.graph, directed=F)
+```
+
+## Shortest Paths using Dijkstra’s algorithm
+
+Computing the distance matrix:  
+```{r}
+D <- shortest.paths(user.graph, algorithm = "dijkstra")
+D[D == Inf] <- NA
+
+rownames(D) <- all.users
+colnames(D) <- all.users
+```
+
+The paper assumes that social influence will decay exponentially as the social-network distance increases. Therefore, the distance matrix is transformed to the influence matrix $I = (ist) s, t =1, 2, …, M$ via:
+$i_st = exp(-d_st)$.   
+
+Computing the influence matrix: 
+```{r}
+I <- exp(D * (-1))
+
+rownames(I) <- all.users
+colnames(I) <- all.users
+
+dim(I)
+```
+
+## Reducing Influence Matrix to only Training Set of Users
+
+Now we ensure the analysis only goes forward with users that were contained in the *train* dataset of user / artist listens. 
+
+```{r}
+user.IDs <- unique(rownames(user.artists))
+
+length(user.IDs)
+```
+
+```{r}
+keep <- which(all.users %in% user.IDs)
+length(keep)
+```
+
+Find I for only the training set. 
+```{r}
+I <- I[,keep]
+I <- I[keep,]
+dim(I)
+```
+
+
+## Adding Context via the Influence Matrix
+
+```{r}
+sim.matrix.base.zeros.m <- as.matrix(sim.matrix.base.zeros)
+dim(sim.matrix.base.zeros.m)
+```
+
+```{r}
+start.time <- Sys.time()
+sim.matrix.zeros.I <- I * sim.matrix.base.zeros.m 
+end.time <- Sys.time()
+time.taken <- end.time - start.time
+time.taken
+```
+
+```{r}
+sim.matrix.base.ave.m  <- as.matrix(sim.matrix.base.ave)
+
+start.time <- Sys.time()
+sim.matrix.ave.I <- I * sim.matrix.base.ave.m 
+end.time <- Sys.time()
+time.taken <- end.time - start.time
+time.taken
+```
+
+# Applying the Recommender Model
+
+## Base models
+```{r}
+n.recommend <- 6
+
+sim.matrix.base.zeros.model <- Recommender(data = user.artists.rrm, method = "UBCF")
+
+model.1a <- recommenderlab::predict(object = sim.matrix.base.zeros.model, newdata = user.artists.rrm.test, n = n.recommend)
+```
+
+```{r}
+sim.matrix.base.ave.model <- Recommender(data = user.artists.ave.rrm, method = "UBCF")
+
+model.1b <- recommenderlab::predict(object = sim.matrix.base.ave.model,  newdata = user.artists.ave.rrm.test, n = n.recommend)
+```
+
+```{r}
+model.1a_accuracy <- calcPredictionAccuracy(model.1a, user.artists.rrm.test, goodRating = 500, byUser = TRUE, given = nrow(user.artists.rrm.test))
+
+qplot(model.1a_accuracy[, "FPR"]) + geom_histogram()
+```
+
+
+
+## Social Models
+
+
+```{r}
+a <- as(sim.matrix.zeros.I, "Recommender")
+```
+
