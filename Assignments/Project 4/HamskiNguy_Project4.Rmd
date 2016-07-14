@@ -92,16 +92,19 @@ user.ids <- unique(user.artists.pairwise$userID)
 ## User-Item Matrix Construction
 Using the TidyR library the pairwise data was converted into a sparse matrix.
 ```{r spread_data, cache=TRUE}
-user.artists.matrix <- user.artists.pairwise %>%
-  spread(key = name, value = weight) %>%
-  distinct() %>%
-  select(one_of(artist.cutoff$name)) %>%
-  as.matrix()
+load("user_artists.RDA") 
 
-rownames(user.artists.matrix) <- user.ids
+# user.artists.matrix <- user.artists.pairwise %>%
+#   spread(key = name, value = weight) %>%
+#   distinct() %>%
+#   select(one_of(artist.cutoff$name)) %>%
+#   as.matrix()
+# 
+# rownames(user.artists.matrix) <- user.ids
+# 
+# user.artists <- user.artists.matrix
 
-user.artists <- user.artists.matrix
-
+user.artists -> user.artists.matrix
 dim(user.artists)
 ```
 
